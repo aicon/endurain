@@ -27,7 +27,7 @@ jobs:
             runner: ubuntu-24.04-arm
     env:
       IMAGE_NAME: ghcr.io/${{ github.repository }}
-      IMAGE_TAG: 0.20.1-summary
+      IMAGE_TAG: 0.20.1-place
 
     steps:
       - name: Checkout code
@@ -51,7 +51,7 @@ jobs:
             --platform "${{ matrix.platform }}" \
             --file docker/Dockerfile \
             --label "org.opencontainers.image.source=https://github.com/aicon/endurain" \
-            --label "org.opencontainers.image.description=Unofficial Endurain v0.20.1 fork. Summary cards also show stored heart rate and elevation, including both on a walk. Not an official Endurain image." \
+            --label "org.opencontainers.image.description=Unofficial Endurain v0.20.1 fork. Summary cards keep heart rate and elevation. The header shows the recording device and the settlement with the country. Not an official Endurain image." \
             --label "org.opencontainers.image.version=0.20.1-summary" \
             --tag "${IMAGE_NAME}:${IMAGE_TAG}-${{ matrix.arch }}" \
             --push \
@@ -63,7 +63,7 @@ jobs:
     needs: build-arch-images
     env:
       IMAGE_NAME: ghcr.io/${{ github.repository }}
-      IMAGE_TAG: 0.20.1-summary
+      IMAGE_TAG: 0.20.1-place
 
     steps:
       - name: Login to GitHub Container Registry
