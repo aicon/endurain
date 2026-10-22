@@ -18,6 +18,8 @@ The change is proposed upstream in [endurain-project/endurain#847](https://githu
 
 ## Temporary image
 
-`ghcr.io/aicon/endurain:0.20.1-summary`
+`ghcr.io/aicon/endurain:0.20.1-place`
 
-Same container as upstream v0.20.1, plus the summary-card change above. It does not replace `ghcr.io/endurain-project/endurain`. Drop this image when the upstream pull request is merged and you move back to an official release.
+Same container as upstream v0.20.1, plus the summary-card change above. The activity header shows the recording device between the date and the place when the imported file names one. A village or hamlet is stored as the settlement, so the place reads as the settlement and the country, not the country alone.
+
+It does not replace `ghcr.io/endurain-project/endurain`. Drop this image when you move back to an official release.
