@@ -14,7 +14,13 @@ The activity summary cards were omitting aggregates that the activity already st
 
 `buildActivityMetrics` now includes average heart rate, max heart rate, and elevation gain when those values are stored. A walk shows both heart rate and elevation. Swimming still has no elevation tile. Empty values, and values hidden by privacy, stay off the card. Gym and strength sessions are unchanged.
 
-The change is proposed upstream in [endurain-project/endurain#847](https://github.com/endurain-project/endurain/pull/847).
+The activity header shows the recording device between the date and the place when the imported file names one. A GPX file uses its creator. A TCX file uses Creator/Name. A name that only identifies the exporting program, such as FitBridge, is ignored.
+
+A village or hamlet is stored as the settlement. A row that only had a country is filled in on the next lookup, so the place reads as the settlement and the country.
+
+The home feed card still shows the date and the place. The device is on the activity page.
+
+These changes are proposed upstream in [endurain-project/endurain#847](https://github.com/endurain-project/endurain/pull/847).
 
 ## Temporary image
 
