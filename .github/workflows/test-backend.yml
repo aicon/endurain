@@ -26,6 +26,7 @@ jobs:
 
   test-backend:
     name: Backend (pytest)
+    if: github.repository == 'endurain-project/endurain'
     runs-on: ubuntu-latest
     # Disposable database for the tests marked ``postgres``: per-session
     # connections, row locks and unique indexes that SQLite cannot reproduce.

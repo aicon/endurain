@@ -24,6 +24,7 @@ jobs:
 
   lint-backend:
     name: Backend (ruff)
+    if: github.repository == 'endurain-project/endurain'
     runs-on: ubuntu-latest
     steps:
       - name: Checkout code
