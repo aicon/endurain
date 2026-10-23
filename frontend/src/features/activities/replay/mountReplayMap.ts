@@ -1,4 +1,5 @@
-import { AttributionControl, GeoJSONSource, Map, Marker } from 'maplibre-gl'
+import { AttributionControl, GeoJSONSource, Map, Marker, setWorkerUrl } from 'maplibre-gl'
+import maplibreWorkerUrl from 'maplibre-gl/dist/maplibre-gl-worker.mjs?url'
 import 'maplibre-gl/dist/maplibre-gl.css'
 
 import type { GeoPoint } from '@/composables/useMapProvider'
@@ -6,6 +7,11 @@ import type { GeoPoint } from '@/composables/useMapProvider'
 import { courseBearing } from '@/features/activities/utils/course'
 import { pointAtFraction } from '@/features/activities/utils/scrub'
 import { themeColor } from '@/lib/themeColor'
+
+// The bundled worker must be a same-origin file. MapLibre's default URL points
+// at a script that Vite does not emit, and a blob: worker is blocked by the
+// page's script-src. Set this before the first map is created.
+setWorkerUrl(maplibreWorkerUrl)
 
 /** Open elevation tiles. No API key; the map credits Mapterhorn. */
 const TERRAIN_TILES = 'https://tiles.mapterhorn.com/{z}/{x}/{y}.webp'
@@ -95,6 +101,11 @@ export async function mountReplayMap(
         },
       },
       layers: [
+        {
+          id: 'ground',
+          type: 'background',
+          paint: { 'background-color': '#d5e3d8' },
+        },
         { id: 'base', type: 'raster', source: 'base' },
         { id: 'hillshade', type: 'hillshade', source: 'terrain' },
         {
@@ -150,6 +161,9 @@ export async function mountReplayMap(
     loaded = true
     map.resize()
     aim()
+  })
+  map.on('error', (event) => {
+    console.error('Tilted replay map', event.error)
   })
 
   return {

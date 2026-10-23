@@ -578,7 +578,12 @@ class TestSecurityHeadersMiddleware:
             response = client.get("/html")
 
         csp = response.headers["Content-Security-Policy"]
-        assert "connect-src 'self' https://cdn.jsdelivr.net https://api.github.com;" in csp
+        assert (
+            "connect-src 'self' https://cdn.jsdelivr.net https://api.github.com "
+            "https://*.openstreetmap.org https://*.stadiamaps.com https://tiles.mapterhorn.com;"
+            in csp
+        )
+        assert "worker-src 'self' blob:;" in csp
 
     def test_connect_src_includes_additional_origins_when_set(self):
         from fastapi import FastAPI
@@ -602,6 +607,8 @@ class TestSecurityHeadersMiddleware:
 
         csp = response.headers["Content-Security-Policy"]
         assert (
-            "connect-src 'self' https://cdn.jsdelivr.net https://api.github.com https://auth.example.com https://proxy.example.com;"
+            "connect-src 'self' https://cdn.jsdelivr.net https://api.github.com "
+            "https://auth.example.com https://proxy.example.com "
+            "https://*.openstreetmap.org https://*.stadiamaps.com https://tiles.mapterhorn.com;"
             in csp
         )
