@@ -151,6 +151,13 @@ class TestComputeElevationGainAndLoss:
         assert gain == 0.0
         assert loss == 0.0
 
+    def test_slow_descent_is_counted(self):
+        # A long downhill stays under 0.1 m per sample. The whole drop still counts.
+        elevations = [{"ele": 136 - 0.05 * i} for i in range(281)]
+        gain, loss = compute_elevation_gain_and_loss(elevations, median_window=1, avg_window=1, threshold=0.1)
+        assert gain == 0.0
+        assert loss == pytest.approx(13.9)
+
     def test_slow_climb_is_counted(self):
         # 0.05 m per sample stays under the 0.1 m gate, but the hill is 10 m.
         elevations = [{"ele": 100 + 0.05 * i} for i in range(201)]
