@@ -51,7 +51,7 @@ jobs:
             --platform "${{ matrix.platform }}" \
             --file docker/Dockerfile \
             --label "org.opencontainers.image.source=https://github.com/aicon/endurain" \
-            --label "org.opencontainers.image.description=Unofficial Endurain v0.20.1 fork. Summary cards keep heart rate and elevation. The header shows the recording device and the settlement with the country. Not an official Endurain image." \
+            --label "org.opencontainers.image.description=Unofficial Endurain v0.20.1 fork. Summary cards keep heart rate and elevation. The header shows the recording device and the settlement with the country. A slow climb stays in the elevation total. Not an official Endurain image." \
             --label "org.opencontainers.image.version=0.20.1-summary" \
             --tag "${IMAGE_NAME}:${IMAGE_TAG}-${{ matrix.arch }}" \
             --push \
