@@ -313,7 +313,7 @@ onBeforeUnmount(() => {
     <button
       v-if="replay && points.length > 1 && open"
       type="button"
-      class="absolute top-3 left-3 z-[1100] flex size-9 items-center justify-center rounded-full bg-zinc-900/90 text-white shadow-lg backdrop-blur-sm transition-colors hover:bg-zinc-900"
+      class="absolute right-3 bottom-3 z-[1100] flex size-10 items-center justify-center rounded-full bg-brand text-white shadow-lg transition-colors hover:bg-brand-mid"
       :aria-label="$t('activities.replay.close')"
       @click="closePlayer"
     >
@@ -322,7 +322,7 @@ onBeforeUnmount(() => {
     <button
       v-if="replay && points.length > 1 && !open"
       type="button"
-      class="absolute right-3 bottom-3 z-[1100] flex size-10 items-center justify-center rounded-full bg-zinc-900/90 text-white shadow-lg backdrop-blur-sm transition-colors hover:bg-zinc-900"
+      class="absolute right-3 bottom-3 z-[1100] flex size-10 items-center justify-center rounded-full bg-brand text-white shadow-lg transition-colors hover:bg-brand-mid"
       :aria-label="$t('activities.replay.open')"
       @click="reveal"
     >
@@ -330,7 +330,7 @@ onBeforeUnmount(() => {
     </button>
     <div
       v-if="replay && points.length > 1 && open"
-      class="absolute bottom-6 left-1/2 z-[1100] flex w-[90%] max-w-4xl -translate-x-1/2 items-center gap-3 rounded-xl bg-zinc-900/50 px-3 py-2.5 text-white shadow-lg backdrop-blur-sm"
+      class="absolute bottom-6 left-3 right-16 z-[1100] flex max-w-4xl items-center gap-3 rounded-xl bg-zinc-900/50 px-3 py-2.5 text-white shadow-lg backdrop-blur-sm"
       role="group"
       :aria-label="$t('activities.replay.label')"
     >
