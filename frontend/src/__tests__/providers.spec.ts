@@ -47,6 +47,7 @@ describe('useMapProvider', () => {
       instance.update({ track: { points: [] } })
       instance.recenter()
       instance.setCursor(null)
+      instance.panTo({ lat: 0, lng: 0 })
       instance.setTrackHover(null)
       instance.destroy()
     }).not.toThrow()
@@ -59,6 +60,7 @@ describe('useMapProvider', () => {
         update: () => {},
         recenter: () => {},
         setCursor: () => {},
+        panTo: () => {},
         setTrackHover: () => {},
         destroy: () => {},
       }),

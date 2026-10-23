@@ -223,6 +223,9 @@ export function createLeafletMapProvider(config: LeafletMapProviderConfig = {}):
           }
           cursor.bringToFront()
         },
+        panTo(point: GeoPoint): void {
+          map.panTo([point.lat, point.lng], { animate: false })
+        },
         setTrackHover(handler: TrackHoverHandler | null): void {
           onTrackHover = handler
         },

@@ -74,6 +74,8 @@ export interface StreamWaypoint {
   lat?: number | null
   /** Longitude in decimal degrees (present on the GPS/map stream, type 7). */
   lon?: number | null
+  /** Sample time, ISO-8601 when the importer stored one. */
+  time?: string | null
 }
 
 /** A single heart-rate zone bucket (zones 1–5). */

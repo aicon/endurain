@@ -64,6 +64,12 @@
     "label": "Tevékenység útvonalának térképe",
     "recenter": "Térkép középre igazítása"
   },
+  "replay": {
+    "label": "Útvonal lejátszása",
+    "play": "Lejátszás",
+    "pause": "Szünet",
+    "speed": "Lejátszási sebesség {speed}×"
+  },
   "metrics": {
     "time": "Idő",
     "distance": "Táv",
