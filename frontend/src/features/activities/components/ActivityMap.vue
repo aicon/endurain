@@ -54,7 +54,7 @@ const ready = useRenderProvidersReady()
 const container = ref<HTMLElement | null>(null)
 const playing = ref(false)
 const open = ref(false)
-const speed = ref<ReplaySpeed>(1)
+const speed = ref<ReplaySpeed>(10)
 /** Slider position, kept in step with `scrubFraction` and the playback clock. */
 const scrubModel = ref(0)
 const played = computed(() => `${scrubModel.value * 100}%`)
@@ -224,7 +224,7 @@ function setSpeed(next: ReplaySpeed): void {
 /** Steps to the next playback rate, wrapping after the fastest. */
 function cycleSpeed(): void {
   const index = REPLAY_SPEEDS.indexOf(speed.value)
-  setSpeed(REPLAY_SPEEDS[(index + 1) % REPLAY_SPEEDS.length] ?? 1)
+  setSpeed(REPLAY_SPEEDS[(index + 1) % REPLAY_SPEEDS.length] ?? 10)
 }
 
 /** Opens the playback bar. */
@@ -330,7 +330,7 @@ onBeforeUnmount(() => {
     </button>
     <div
       v-if="replay && points.length > 1 && open"
-      class="absolute bottom-[12%] left-1/2 z-[1100] flex w-[min(36rem,calc(100%-1.5rem))] -translate-x-1/2 items-center gap-3 rounded-xl bg-zinc-900/90 px-3 py-2.5 text-white shadow-lg backdrop-blur-sm"
+      class="absolute bottom-6 left-1/2 z-[1100] flex w-[90%] max-w-4xl -translate-x-1/2 items-center gap-3 rounded-xl bg-zinc-900/50 px-3 py-2.5 text-white shadow-lg backdrop-blur-sm"
       role="group"
       :aria-label="$t('activities.replay.label')"
     >
@@ -360,7 +360,7 @@ onBeforeUnmount(() => {
       />
       <button
         type="button"
-        class="w-10 shrink-0 text-right text-sm font-medium tabular-nums transition-colors hover:text-white/80"
+        class="min-w-12 shrink-0 text-right text-sm font-medium tabular-nums transition-colors hover:text-white/80"
         :aria-label="$t('activities.replay.speed', { speed })"
         @click="cycleSpeed"
       >
