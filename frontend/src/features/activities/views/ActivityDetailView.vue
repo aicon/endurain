@@ -15,7 +15,6 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { useCurrentUser } from '@/features/auth/composables/useCurrentUser'
 import ActivityDetailHeader from '@/features/activities/components/ActivityDetailHeader.vue'
 import ActivityGallery from '@/features/activities/components/ActivityGallery.vue'
-import ActivityGearCard from '@/features/activities/components/ActivityGearCard.vue'
 import ActivityHrZones from '@/features/activities/components/ActivityHrZones.vue'
 import ActivityLapsTable from '@/features/activities/components/ActivityLapsTable.vue'
 import ActivityMetricsGrid from '@/features/activities/components/ActivityMetricsGrid.vue'
@@ -60,8 +59,7 @@ const { data: laps } = useActivityLapsQuery(activityId, activityLoaded)
 
 const currentUserId = computed(() => currentUser.value?.id ?? null)
 
-// Only the owner manages gear; non-owners (incl. public viewers) never see the
-// gear card.
+// Only the owner manages gear (in the header) and deletes photos.
 const isOwner = computed(
   () => !!activity.value && isActivityOwner(activity.value, currentUserId.value),
 )
@@ -331,8 +329,6 @@ const notFound = computed(() => !isPending.value && !isError.value && activity.v
         follow
         @track-hover="onScrub"
       />
-
-      <ActivityGearCard v-if="isOwner" :activity="activity" />
 
       <div
         v-if="chartPanels.length > 0"
