@@ -20,12 +20,14 @@ A village or hamlet is stored as the settlement. A row that only had a country i
 
 The home feed card still shows the date and the place. The device is on the activity page.
 
-These changes are proposed upstream in [endurain-project/endurain#847](https://github.com/endurain-project/endurain/pull/847).
+Elevation gain used to add a sample only when that one sample moved more than 0.1 m. After smoothing, a one-second track climbs about 0.04 m per sample, so a real hill became 0 m while the chart still showed it. The 0.1 m limit is now the climb or drop since the last counted point. A slow rise is kept. A wobble smaller than 0.1 m is still ignored. Laps use the same total. An activity imported earlier keeps the old total until its file is imported again.
+
+The summary cards, the device, and the settlement are proposed upstream in [endurain-project/endurain#847](https://github.com/endurain-project/endurain/pull/847). The elevation total is only in this fork so far.
 
 ## Temporary image
 
 `ghcr.io/aicon/endurain:0.20.1-place`
 
-Same container as upstream v0.20.1, plus the summary-card change above. The activity header shows the recording device between the date and the place when the imported file names one. A village or hamlet is stored as the settlement, so the place reads as the settlement and the country, not the country alone.
+Same container as upstream v0.20.1, plus the summary-card, device, settlement, and elevation-total changes above. The activity header shows the recording device between the date and the place when the imported file names one. A village or hamlet is stored as the settlement, so the place reads as the settlement and the country, not the country alone. A slow climb is included in the elevation total.
 
 It does not replace `ghcr.io/endurain-project/endurain`. Drop this image when you move back to an official release.
