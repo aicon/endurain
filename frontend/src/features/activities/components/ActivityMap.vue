@@ -280,11 +280,17 @@ async function mountTilted(): Promise<void> {
     return
   }
   replayMap?.destroy()
-  replayMap = await mountReplayMap(host, {
-    points: props.points,
-    tileUrl: config.value.map.tileUrl,
-    attribution: config.value.map.attribution,
-  })
+  try {
+    replayMap = await mountReplayMap(host, {
+      points: props.points,
+      tileUrl: config.value.map.tileUrl,
+      attribution: config.value.map.attribution,
+    })
+  } catch (error) {
+    replayMap = null
+    console.error('Could not open the tilted replay map', error)
+    return
+  }
   if (generation !== replayMount || !open.value) {
     replayMap.destroy()
     replayMap = null

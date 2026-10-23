@@ -102,8 +102,11 @@ if [ -n "$ENDURAIN_HOST" ]; then
 
         if [ -n "$WS_ORIGIN" ]; then
             # Preserve the external origins from the build-time default
-            # (vite.config.ts) — currently the GitHub release-update check.
-            EXTERNAL_CONNECT="https://api.github.com"
+            # (vite.config.ts): the GitHub release-update check, the flat-map tile
+            # hosts, and the tilted-replay terrain tiles. Dropping a host here
+            # blocks it, because this meta policy is enforced together with the
+            # backend header.
+            EXTERNAL_CONNECT="https://api.github.com https://*.openstreetmap.org https://*.stadiamaps.com https://tiles.mapterhorn.com"
             # connect-src is the LAST CSP directive (see vite.config.ts), so match
             # through to the closing '"' of the meta content attribute. Matching to
             # the next ';' would corrupt the policy: the built HTML encodes quotes

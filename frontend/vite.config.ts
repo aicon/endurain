@@ -34,13 +34,18 @@ const CONTENT_SECURITY_POLICY = [
   "form-action 'self'",
   "frame-src 'none'",
   "manifest-src 'self'",
+  // MapLibre's replay worker is a same-origin module. blob: covers the library's
+  // fallback when that file is loaded from another origin.
+  "worker-src 'self' blob:",
   // Same-origin API + realtime sockets are covered by 'self'. api.github.com is the
   // release-update check (features/core/services/updateCheck.ts), a direct browser
-  // fetch. Split-origin deployments additionally get their exact backend origin
-  // pinned here at container start by docker/start.sh (from ENDURAIN_HOST), which
-  // rewrites this directive by matching to the end of the meta `content` attribute
-  // — so connect-src MUST stay the LAST directive in this list.
-  "connect-src 'self' https://api.github.com",
+  // fetch. The map hosts are the tilted replay: raster tiles (fetched, not drawn
+  // as images) and Mapterhorn terrain. Split-origin deployments additionally get
+  // their exact backend origin pinned here at container start by docker/start.sh
+  // (from ENDURAIN_HOST), which rewrites this directive by matching to the end of
+  // the meta `content` attribute — so connect-src MUST stay the LAST directive,
+  // and start.sh must keep every host listed here.
+  "connect-src 'self' https://api.github.com https://*.openstreetmap.org https://*.stadiamaps.com https://tiles.mapterhorn.com",
 ].join('; ')
 
 /**
