@@ -1,6 +1,6 @@
 <script setup lang="ts">
-import { onBeforeUnmount, onMounted, ref, watch } from 'vue'
-import { LocateFixed, Pause, Play } from '@lucide/vue'
+import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue'
+import { LocateFixed, Pause, Play, X } from '@lucide/vue'
 
 import type { GeoPoint, MapInstance } from '@/composables/useMapProvider'
 
@@ -53,7 +53,11 @@ const emit = defineEmits<{
 const ready = useRenderProvidersReady()
 const container = ref<HTMLElement | null>(null)
 const playing = ref(false)
+const open = ref(false)
 const speed = ref<ReplaySpeed>(1)
+/** Slider position, kept in step with `scrubFraction` and the playback clock. */
+const scrubModel = ref(0)
+const played = computed(() => `${scrubModel.value * 100}%`)
 let instance: MapInstance | null = null
 let frame = 0
 let startedAt = 0
@@ -115,6 +119,46 @@ function pause(): void {
   cancelClock()
 }
 
+/** Moves the route marker. While following, the point stays in the center. */
+function moveCursor(fraction: number, followCamera: boolean): void {
+  const point = pointAtFraction(props.points, fraction)
+  if (!point) {
+    return
+  }
+  instance?.setCursor(point)
+  if (followCamera) {
+    instance?.panTo(point)
+  }
+}
+
+/** Reads the slider and moves the cursor to that point. */
+function onSliderInput(event: Event): void {
+  const raw = (event.target as HTMLInputElement).value
+  seek(Number(raw))
+}
+
+/**
+ * Jumps the cursor, the charts, and the slider to a fraction.
+ *
+ * @param fraction - Position from 0 to 1.
+ */
+function seek(fraction: number): void {
+  if (!Number.isFinite(fraction)) {
+    return
+  }
+  const next = Math.min(1, Math.max(0, fraction))
+  scrubModel.value = next
+  if (playing.value) {
+    origin = next
+    startedAt = performance.now()
+    if (next >= 1) {
+      pause()
+    }
+  }
+  emit('replay', next)
+  moveCursor(next, true)
+}
+
 /**
  * Places the cursor for the elapsed playback clock and keeps it centered.
  *
@@ -132,12 +176,9 @@ function tick(now: number): void {
     timesMs: props.timesMs,
     startFraction: origin,
   })
+  scrubModel.value = step.fraction
   emit('replay', step.fraction)
-  const point = pointAtFraction(props.points, step.fraction)
-  if (point) {
-    instance?.setCursor(point)
-    instance?.panTo(point)
-  }
+  moveCursor(step.fraction, true)
   if (step.done) {
     playing.value = false
     return
@@ -147,10 +188,12 @@ function tick(now: number): void {
 
 /** Starts playback from the current cursor, or from the start at the end. */
 function play(): void {
-  const current = props.scrubFraction ?? 0
+  const current = scrubModel.value
   origin = current >= 1 ? 0 : current
   if (current >= 1) {
+    scrubModel.value = 0
     emit('replay', 0)
+    moveCursor(0, true)
   }
   startedAt = performance.now()
   playing.value = true
@@ -176,6 +219,23 @@ function setSpeed(next: ReplaySpeed): void {
     startedAt = performance.now()
   }
   speed.value = next
+}
+
+/** Steps to the next playback rate, wrapping after the fastest. */
+function cycleSpeed(): void {
+  const index = REPLAY_SPEEDS.indexOf(speed.value)
+  setSpeed(REPLAY_SPEEDS[(index + 1) % REPLAY_SPEEDS.length] ?? 1)
+}
+
+/** Opens the playback bar. */
+function reveal(): void {
+  open.value = true
+}
+
+/** Hides the playback bar and stops the clock. */
+function closePlayer(): void {
+  pause()
+  open.value = false
 }
 
 /** Re-fits the map to the whole track after the user has panned or zoomed. */
@@ -207,6 +267,15 @@ watch(
     if (playing.value) {
       pause()
     }
+  },
+)
+watch(
+  () => props.scrubFraction,
+  (value) => {
+    if (playing.value || value == null) {
+      return
+    }
+    scrubModel.value = value
   },
 )
 
@@ -241,39 +310,111 @@ onBeforeUnmount(() => {
     >
       <LocateFixed class="size-4" />
     </button>
+    <button
+      v-if="replay && points.length > 1 && open"
+      type="button"
+      class="absolute top-3 left-3 z-[1100] flex size-9 items-center justify-center rounded-full bg-zinc-900/90 text-white shadow-lg backdrop-blur-sm transition-colors hover:bg-zinc-900"
+      :aria-label="$t('activities.replay.close')"
+      @click="closePlayer"
+    >
+      <X class="size-4" />
+    </button>
+    <button
+      v-if="replay && points.length > 1 && !open"
+      type="button"
+      class="absolute right-3 bottom-3 z-[1100] flex size-10 items-center justify-center rounded-full bg-zinc-900/90 text-white shadow-lg backdrop-blur-sm transition-colors hover:bg-zinc-900"
+      :aria-label="$t('activities.replay.open')"
+      @click="reveal"
+    >
+      <Play class="size-4" />
+    </button>
     <div
-      v-if="replay && points.length > 1"
-      class="absolute inset-x-3 bottom-3 z-[1100] flex items-center gap-1 overflow-x-auto rounded-full border border-border bg-card/85 p-1 text-foreground shadow-sm backdrop-blur"
+      v-if="replay && points.length > 1 && open"
+      class="absolute bottom-[12%] left-1/2 z-[1100] flex w-[min(36rem,calc(100%-1.5rem))] -translate-x-1/2 items-center gap-3 rounded-xl bg-zinc-900/90 px-3 py-2.5 text-white shadow-lg backdrop-blur-sm"
       role="group"
       :aria-label="$t('activities.replay.label')"
     >
       <button
         type="button"
-        class="flex size-8 shrink-0 items-center justify-center rounded-full text-foreground transition-colors hover:bg-accent"
+        class="flex size-8 shrink-0 items-center justify-center rounded-full transition-colors hover:bg-white/10"
         :aria-label="playing ? $t('activities.replay.pause') : $t('activities.replay.play')"
         @click="playing ? pause() : play()"
       >
         <Pause v-if="playing" class="size-4" />
         <Play v-else class="size-4" />
       </button>
-      <div class="flex min-w-0 flex-1 justify-end gap-0.5">
-        <button
-          v-for="rate in REPLAY_SPEEDS"
-          :key="rate"
-          type="button"
-          class="shrink-0 rounded-full px-2 py-1 text-caption tabular-nums transition-colors"
-          :class="
-            rate === speed
-              ? 'bg-foreground text-background'
-              : 'text-muted-foreground hover:bg-accent'
-          "
-          :aria-pressed="rate === speed"
-          :aria-label="$t('activities.replay.speed', { speed: rate })"
-          @click="setSpeed(rate)"
-        >
-          {{ rate }}×
-        </button>
-      </div>
+      <input
+        v-model.number="scrubModel"
+        type="range"
+        min="0"
+        max="1"
+        step="0.001"
+        class="replay-range w-full min-w-0 flex-1 cursor-pointer"
+        :style="{ '--replay': played }"
+        :aria-label="$t('activities.replay.timeline')"
+        :aria-valuemin="0"
+        :aria-valuemax="1"
+        :aria-valuenow="scrubModel"
+        :aria-valuetext="$t('activities.replay.timeline')"
+        @input="onSliderInput"
+      />
+      <button
+        type="button"
+        class="w-10 shrink-0 text-right text-sm font-medium tabular-nums transition-colors hover:text-white/80"
+        :aria-label="$t('activities.replay.speed', { speed })"
+        @click="cycleSpeed"
+      >
+        {{ speed }}x
+      </button>
     </div>
   </div>
 </template>
+
+<style scoped>
+.replay-range {
+  appearance: none;
+  height: 1.25rem;
+  background: transparent;
+}
+
+.replay-range::-webkit-slider-runnable-track {
+  height: 4px;
+  border-radius: 9999px;
+  background: linear-gradient(
+    to right,
+    #ffffff var(--replay),
+    rgb(161 161 170 / 0.7) var(--replay)
+  );
+}
+
+.replay-range::-webkit-slider-thumb {
+  appearance: none;
+  width: 14px;
+  height: 14px;
+  margin-top: -5px;
+  border-radius: 9999px;
+  background: #ffffff;
+  box-shadow: 0 1px 3px rgb(0 0 0 / 0.45);
+}
+
+.replay-range::-moz-range-track {
+  height: 4px;
+  border-radius: 9999px;
+  background: rgb(161 161 170 / 0.7);
+}
+
+.replay-range::-moz-range-progress {
+  height: 4px;
+  border-radius: 9999px;
+  background: #ffffff;
+}
+
+.replay-range::-moz-range-thumb {
+  width: 14px;
+  height: 14px;
+  border: 0;
+  border-radius: 9999px;
+  background: #ffffff;
+  box-shadow: 0 1px 3px rgb(0 0 0 / 0.45);
+}
+</style>

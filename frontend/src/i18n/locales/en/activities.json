@@ -68,7 +68,10 @@
     "label": "Route playback",
     "play": "Play",
     "pause": "Pause",
-    "speed": "Playback speed {speed}×"
+    "open": "Show playback",
+    "close": "Hide playback",
+    "timeline": "Route position",
+    "speed": "Playback speed {speed}x"
   },
   "metrics": {
     "time": "Time",

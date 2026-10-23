@@ -68,7 +68,10 @@
     "label": "Útvonal lejátszása",
     "play": "Lejátszás",
     "pause": "Szünet",
-    "speed": "Lejátszási sebesség {speed}×"
+    "open": "Lejátszó megjelenítése",
+    "close": "Lejátszó elrejtése",
+    "timeline": "Helyzet az útvonalon",
+    "speed": "Lejátszási sebesség {speed}x"
   },
   "metrics": {
     "time": "Idő",
