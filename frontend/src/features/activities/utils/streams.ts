@@ -494,6 +494,66 @@ export function buildStreamCharts(
   })
 }
 
+/** A route polyline plus the sample clock, when every point has one. */
+export interface TrackTimeline {
+  /** Ordered geo points. */
+  points: GeoPoint[]
+  /**
+   * Epoch milliseconds for each point. `null` when any sample has no time, so
+   * playback walks the points evenly instead.
+   */
+  timesMs: number[] | null
+}
+
+/**
+ * Reads a waypoint clock value.
+ *
+ * @param value - An ISO timestamp, epoch milliseconds, or nothing.
+ * @returns Epoch milliseconds, or `null` when the value is not a time.
+ */
+function waypointTimeMs(value: unknown): number | null {
+  if (typeof value === 'number' && Number.isFinite(value)) {
+    return value
+  }
+  if (typeof value !== 'string' || value.length === 0) {
+    return null
+  }
+  const parsed = Date.parse(value)
+  return Number.isNaN(parsed) ? null : parsed
+}
+
+/**
+ * Extracts the GPS track and its clock from whichever stream carries coordinates.
+ *
+ * @param streams - The activity's metric streams.
+ * @returns The route. `timesMs` is `null` when the samples are not a real clock.
+ */
+export function extractTrack(streams: ActivityStream[]): TrackTimeline {
+  for (const stream of streams) {
+    const points: GeoPoint[] = []
+    const times: number[] = []
+    let timed = true
+    for (const waypoint of stream.waypoints) {
+      const lat = num(waypoint.lat)
+      const lon = num(waypoint.lon)
+      if (Number.isNaN(lat) || Number.isNaN(lon)) {
+        continue
+      }
+      points.push({ lat, lng: lon })
+      const time = waypointTimeMs(waypoint.time)
+      if (time == null) {
+        timed = false
+      } else {
+        times.push(time)
+      }
+    }
+    if (points.length > 0) {
+      return { points, timesMs: timed && times.length === points.length ? times : null }
+    }
+  }
+  return { points: [], timesMs: null }
+}
+
 /**
  * Extracts the GPS track polyline from whichever stream carries coordinates.
  *
@@ -501,19 +561,5 @@ export function buildStreamCharts(
  * @returns Ordered geo points, or an empty array when no coordinates exist.
  */
 export function extractTrackPoints(streams: ActivityStream[]): GeoPoint[] {
-  for (const stream of streams) {
-    const points: GeoPoint[] = []
-    for (const waypoint of stream.waypoints) {
-      const lat = num(waypoint.lat)
-      const lon = num(waypoint.lon)
-      if (!Number.isNaN(lat) && !Number.isNaN(lon)) {
-        // The map provider's GeoPoint uses `lng`; the backend stores `lon`.
-        points.push({ lat, lng: lon })
-      }
-    }
-    if (points.length > 0) {
-      return points
-    }
-  }
-  return []
+  return extractTrack(streams).points
 }

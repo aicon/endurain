@@ -47,6 +47,8 @@ export interface MapInstance {
   recenter(): void
   /** Moves the route cursor. `null` removes it. Does not refit the map. */
   setCursor(point: GeoPoint | null): void
+  /** Centers the current zoom on a point. Does not change the zoom. */
+  panTo(point: GeoPoint): void
   /** Receives hover along the route line. `null` stops listening. */
   setTrackHover(handler: TrackHoverHandler | null): void
   /** Tears down the map and releases resources. */
@@ -75,6 +77,7 @@ const noopMapProvider: MapProvider = {
       update() {},
       recenter() {},
       setCursor() {},
+      panTo() {},
       setTrackHover() {},
       destroy() {},
     }

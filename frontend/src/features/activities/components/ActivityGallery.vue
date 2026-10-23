@@ -49,6 +49,14 @@ const props = withDefaults(
     cursor?: GeoPoint | null
     /** Reports hover on the route line. Home thumbnails leave this off. */
     follow?: boolean
+    /** Shows route playback on the live map. Home thumbnails leave this off. */
+    replay?: boolean
+    /** Sample clock for playback. `null` walks the points evenly. */
+    timesMs?: number[] | null
+    /** Fraction playback continues from. */
+    scrubFraction?: number | null
+    /** Bumps when the viewer scrubs, which stops playback. */
+    scrubSignal?: number
     /**
      * On a phone, keep this gallery under the navbar while the rest of the
      * activity page scrolls. Home cards leave it off.
@@ -63,12 +71,17 @@ const props = withDefaults(
     isOwner: false,
     cursor: null,
     follow: false,
+    replay: false,
+    timesMs: null,
+    scrubFraction: null,
+    scrubSignal: 0,
     sticky: false,
   },
 )
 
 const emit = defineEmits<{
   trackHover: [fraction: number | null]
+  replay: [fraction: number]
 }>()
 
 const { t } = useI18n()
@@ -214,7 +227,12 @@ async function confirmDelete(): Promise<void> {
             :points="points"
             :cursor="cursor"
             :follow="follow"
+            :replay="replay"
+            :times-ms="timesMs"
+            :scrub-fraction="scrubFraction"
+            :scrub-signal="scrubSignal"
             @track-hover="emit('trackHover', $event)"
+            @replay="emit('replay', $event)"
           />
           <component
             :is="thumbnailTo ? RouterLink : 'div'"

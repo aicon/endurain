@@ -5,6 +5,7 @@ import type { ActivityStream } from '@/features/activities/types'
 import {
   buildStreamChart,
   buildStreamCharts,
+  extractTrack,
   extractTrackPoints,
   isMetricRelevantForType,
   METRIC_PRIVACY_FIELD,
@@ -180,6 +181,23 @@ describe('extractTrackPoints', () => {
 
   it('returns an empty array when no stream carries coordinates', () => {
     expect(extractTrackPoints([stream(1, [{ hr: 100 }])])).toEqual([])
+  })
+
+  it('keeps the GPS clock only when every point has a time', () => {
+    const timed = stream(7, [
+      { lat: 1, lon: 2, time: '2024-01-15T08:00:00Z' },
+      { lat: 3, lon: 4, time: '2024-01-15T08:00:01Z' },
+    ])
+    expect(extractTrack([timed]).timesMs).toEqual([
+      Date.parse('2024-01-15T08:00:00Z'),
+      Date.parse('2024-01-15T08:00:01Z'),
+    ])
+
+    const partial = stream(7, [
+      { lat: 1, lon: 2, time: '2024-01-15T08:00:00Z' },
+      { lat: 3, lon: 4 },
+    ])
+    expect(extractTrack([partial]).timesMs).toBeNull()
   })
 })
 

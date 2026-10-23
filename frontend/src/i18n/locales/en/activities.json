@@ -64,6 +64,12 @@
     "label": "Activity route map",
     "recenter": "Recenter map"
   },
+  "replay": {
+    "label": "Route playback",
+    "play": "Play",
+    "pause": "Pause",
+    "speed": "Playback speed {speed}×"
+  },
   "metrics": {
     "time": "Time",
     "distance": "Distance",

@@ -39,7 +39,7 @@ import {
 } from '@/features/activities/utils/privacy'
 import { extractHrZones } from '@/features/activities/utils/hrZones'
 import { pointAtFraction } from '@/features/activities/utils/scrub'
-import { buildStreamCharts, extractTrackPoints } from '@/features/activities/utils/streams'
+import { buildStreamCharts, extractTrack } from '@/features/activities/utils/streams'
 
 const route = useRoute()
 const { t } = useI18n()
@@ -86,9 +86,12 @@ const metricVisibility = computed(() =>
   activity.value ? buildMetricVisibility(activity.value, currentUserId.value) : null,
 )
 
-const trackPoints = computed(() => extractTrackPoints(streams.value ?? []))
+const track = computed(() => extractTrack(streams.value ?? []))
+const trackPoints = computed(() => track.value.points)
+const trackTimesMs = computed(() => track.value.timesMs)
 
 const scrubFraction = ref<number | null>(null)
+const scrubSignal = ref(0)
 let scrubFrame = 0
 let scrubPending: number | null = null
 
@@ -97,6 +100,14 @@ function onPointerUp(event: PointerEvent): void {
   if (event.pointerType !== 'mouse') {
     onScrub(null)
   }
+}
+
+/** A chart or route hover takes the cursor, so playback stops. */
+function onUserScrub(fraction: number | null): void {
+  if (fraction != null) {
+    scrubSignal.value += 1
+  }
+  onScrub(fraction)
 }
 
 /** Keeps one pointer position per frame for every chart and the map marker. */
@@ -326,9 +337,14 @@ const notFound = computed(() => !isPending.value && !isError.value && activity.v
         :activity-id="activity.id"
         :is-owner="isOwner"
         :cursor="cursorPoint"
+        :times-ms="trackTimesMs"
+        :scrub-fraction="scrubFraction"
+        :scrub-signal="scrubSignal"
         follow
+        replay
         sticky
-        @track-hover="onScrub"
+        @track-hover="onUserScrub"
+        @replay="onScrub"
       />
 
       <!-- Below the map on purpose, so these cards slide under it while it is pinned. -->
@@ -350,7 +366,7 @@ const notFound = computed(() => !isPending.value && !isError.value && activity.v
               :render="panel.chart.render"
               :stats="panel.chart.stats"
               :cursor-fraction="scrubFraction"
-              @scrub="onScrub"
+              @scrub="onUserScrub"
             />
             <Card v-else class="flex min-w-0 flex-col gap-3">
               <div class="flex items-center gap-2">
