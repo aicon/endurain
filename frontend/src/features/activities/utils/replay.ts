@@ -1,10 +1,13 @@
 import { indexAtFraction } from '@/features/activities/utils/scrub'
 
+/** Playback rates shown on the button. `1` is the default label. */
+export const REPLAY_SPEEDS = [0.5, 1, 2, 4, 8] as const
+
 /**
- * Playback rates on the activity map. `10` is the default: ten seconds of the
- * recording pass in one wall-clock second. The slower step is `5`.
+ * The labeled rate is multiplied by this before it drives the clock, so the
+ * button still reads 1x while the route plays at ten times the recording.
  */
-export const REPLAY_SPEEDS = [5, 10, 20, 40, 80] as const
+export const REPLAY_SPEED_SCALE = 10
 
 /** One playback rate from {@link REPLAY_SPEEDS}. */
 export type ReplaySpeed = (typeof REPLAY_SPEEDS)[number]
@@ -95,7 +98,7 @@ function indexAtTime(times: readonly number[], target: number): number {
 /**
  * Advances a route cursor by wall-clock time.
  *
- * With timestamps, `speed` scales recorded time: one second at `10` moves ten
+ * With timestamps, `speed` scales recorded time: one second at `2` moves two
  * seconds along the activity, and the fraction is the index of that sample so
  * the charts stay on the same point. Without timestamps, the same clock walks
  * the samples evenly, one second of wall clock per sample at `1`.

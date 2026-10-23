@@ -1,12 +1,19 @@
 <script setup lang="ts">
-import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue'
+import { computed, nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import { LocateFixed, Pause, Play, X } from '@lucide/vue'
 
 import type { GeoPoint, MapInstance } from '@/composables/useMapProvider'
 
 import { useMapProvider } from '@/composables/useMapProvider'
+import { useAppConfig } from '@/features/config/composables/useAppConfig'
 import { useRenderProvidersReady } from '@/providers'
-import { REPLAY_SPEEDS, replayStep, type ReplaySpeed } from '@/features/activities/utils/replay'
+import type { ReplayMap } from '@/features/activities/replay/mountReplayMap'
+import {
+  REPLAY_SPEED_SCALE,
+  REPLAY_SPEEDS,
+  replayStep,
+  type ReplaySpeed,
+} from '@/features/activities/utils/replay'
 import { pointAtFraction } from '@/features/activities/utils/scrub'
 
 const props = withDefaults(
@@ -51,10 +58,20 @@ const emit = defineEmits<{
 }>()
 
 const ready = useRenderProvidersReady()
+const { config } = useAppConfig()
 const container = ref<HTMLElement | null>(null)
+const replayHost = ref<HTMLElement | null>(null)
 const playing = ref(false)
 const open = ref(false)
-const speed = ref<ReplaySpeed>(10)
+const speed = ref<ReplaySpeed>(1)
+let replayMap: ReplayMap | null = null
+let replayMount = 0
+
+/** Labeled rate times ten, so 1x plays the recording at ten times its pace. */
+function clockSpeed(): number {
+  return speed.value * REPLAY_SPEED_SCALE
+}
+
 /** Slider position, kept in step with `scrubFraction` and the playback clock. */
 const scrubModel = ref(0)
 const played = computed(() => `${scrubModel.value * 100}%`)
@@ -126,9 +143,14 @@ function moveCursor(fraction: number, followCamera: boolean): void {
     return
   }
   instance?.setCursor(point)
-  if (followCamera) {
-    instance?.panTo(point)
+  if (!followCamera) {
+    return
   }
+  if (replayMap) {
+    replayMap.follow(props.points, fraction)
+    return
+  }
+  instance?.panTo(point)
 }
 
 /** Reads the slider and moves the cursor to that point. */
@@ -171,7 +193,7 @@ function tick(now: number): void {
   }
   const step = replayStep({
     elapsedMs: now - startedAt,
-    speed: speed.value,
+    speed: clockSpeed(),
     length: props.points.length,
     timesMs: props.timesMs,
     startFraction: origin,
@@ -210,7 +232,7 @@ function setSpeed(next: ReplaySpeed): void {
   if (playing.value && next !== speed.value) {
     const step = replayStep({
       elapsedMs: performance.now() - startedAt,
-      speed: speed.value,
+      speed: clockSpeed(),
       length: props.points.length,
       timesMs: props.timesMs,
       startFraction: origin,
@@ -224,7 +246,7 @@ function setSpeed(next: ReplaySpeed): void {
 /** Steps to the next playback rate, wrapping after the fastest. */
 function cycleSpeed(): void {
   const index = REPLAY_SPEEDS.indexOf(speed.value)
-  setSpeed(REPLAY_SPEEDS[(index + 1) % REPLAY_SPEEDS.length] ?? 10)
+  setSpeed(REPLAY_SPEEDS[(index + 1) % REPLAY_SPEEDS.length] ?? 1)
 }
 
 /** Opens the playback bar. */
@@ -236,6 +258,39 @@ function reveal(): void {
 function closePlayer(): void {
   pause()
   open.value = false
+}
+
+/** Drops the tilted map so the flat map shows again. */
+function closeTilted(): void {
+  replayMount += 1
+  replayMap?.destroy()
+  replayMap = null
+}
+
+/** Opens the pitched camera over the current point. */
+async function mountTilted(): Promise<void> {
+  await nextTick()
+  const host = replayHost.value
+  if (!host || !open.value) {
+    return
+  }
+  const generation = ++replayMount
+  const { mountReplayMap } = await import('@/features/activities/replay/mountReplayMap')
+  if (generation !== replayMount || !open.value) {
+    return
+  }
+  replayMap?.destroy()
+  replayMap = await mountReplayMap(host, {
+    points: props.points,
+    tileUrl: config.value.map.tileUrl,
+    attribution: config.value.map.attribution,
+  })
+  if (generation !== replayMount || !open.value) {
+    replayMap.destroy()
+    replayMap = null
+    return
+  }
+  replayMap.follow(props.points, scrubModel.value)
 }
 
 /** Re-fits the map to the whole track after the user has panned or zoomed. */
@@ -259,8 +314,16 @@ watch(
       track: { points, ...endpoints(points) },
       interactive: props.interactive,
     })
+    replayMap?.setTrack(points)
   },
 )
+watch(open, (isOpen) => {
+  if (isOpen) {
+    void mountTilted()
+  } else {
+    closeTilted()
+  }
+})
 watch(
   () => props.scrubSignal,
   () => {
@@ -281,6 +344,7 @@ watch(
 
 onBeforeUnmount(() => {
   pause()
+  closeTilted()
   instance?.destroy()
   instance = null
 })
@@ -297,6 +361,12 @@ onBeforeUnmount(() => {
       class="size-full"
       role="img"
       :aria-label="$t('activities.map.label')"
+      @pointerdown="onMapPointerDown"
+    />
+    <div
+      v-if="open"
+      ref="replayHost"
+      class="replay-host absolute inset-0 z-[1050]"
       @pointerdown="onMapPointerDown"
     />
     <!-- z above Leaflet's controls (z-1000) so it stays clickable. -->
@@ -330,7 +400,7 @@ onBeforeUnmount(() => {
     </button>
     <div
       v-if="replay && points.length > 1 && open"
-      class="absolute bottom-6 left-3 right-16 z-[1100] flex max-w-4xl items-center gap-3 rounded-xl bg-zinc-900/50 px-3 py-2.5 text-white shadow-lg backdrop-blur-sm"
+      class="absolute bottom-6 left-1/2 z-[1100] flex w-[70%] max-w-3xl -translate-x-1/2 items-center gap-3 rounded-xl bg-zinc-900/30 px-3 py-2.5 text-white shadow-lg backdrop-blur-sm"
       role="group"
       :aria-label="$t('activities.replay.label')"
     >
@@ -371,6 +441,10 @@ onBeforeUnmount(() => {
 </template>
 
 <style scoped>
+.replay-host :deep(.maplibregl-ctrl-bottom-left) {
+  bottom: 4.75rem;
+}
+
 .replay-range {
   appearance: none;
   height: 1.25rem;
