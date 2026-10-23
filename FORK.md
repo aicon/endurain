@@ -24,7 +24,9 @@ Elevation gain used to add a sample only when that one sample moved more than 0.
 
 The elevation chart series is the altitude at that point. English already says "Elevation". Hungarian said "Szintemelkedés", which is the gain, so a hover of 131 m read as a climb of 131 m. The series is now "Magasság". "Szintemelkedés" and "Szintcsökkenés" stay on the gain and the loss. The hover box uses the card colors instead of the Chart.js black box.
 
-Gear used to be a full card between the map and the charts: a heading, an empty-state sentence, and one button. That split the route from the charts. The same add, change, and remove actions now sit in the header, on the right of the name and the date, and only for the owner. A walk or a run shows the shoe mark, a ride shows a bike, and the three-dot menu stays at the top right.
+Gear used to be a full card between the map and the charts: a heading, an empty-state sentence, and one button. That split the route from the charts. The same add, change, and remove actions now sit in the header, on the right of the name and the date, and only for the owner. A walk or a run shows the shoe mark, a ride shows a bike. The three-dot menu stays at the top right, level with the name, on a phone as well.
+
+On a phone the map sticks under the top bar while the page scrolls, and the charts slide underneath it. The chart hover still moves the point on that map.
 
 Hovering one chart draws the same moment on the other charts and moves a point along the route. Hovering the route moves the chart lines. The line is an HTML overlay and the map point only changes position, so the charts are not redrawn on each move.
 
