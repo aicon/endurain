@@ -13,7 +13,6 @@ import type { GeoPoint } from '@/composables/useMapProvider'
 
 import {
   fetchReplayPlaces,
-  pickOverviewPlaces,
   pickVisiblePlace,
   placeCaption,
   snapPlacesToRoute,
@@ -62,11 +61,11 @@ const SKY_ZENITH = '#6ea8d6'
 /** Starting zoom before the overview camera fits the route. */
 const INTRO_ZOOM = 14
 
-/** Bird's-eye overview after places have loaded, in milliseconds. */
-const OVERVIEW_MS = 2800
+/** North-up overview of the local GPX, in milliseconds. */
+const OVERVIEW_MS = 1300
 
 /** Fly-in from the overview to the start line, in milliseconds. */
-const FLY_IN_MS = 2000
+const FLY_IN_MS = 1500
 
 /** Pitch of the north-up overview camera, in degrees. */
 const OVERVIEW_PITCH = 35
@@ -429,50 +428,6 @@ export async function mountReplayMap(
   let places: ReplayPlace[] = []
   let shownPlace: ReplayPlace | null = null
   let replayState: ReplayState = 'INTRO_OVERVIEW'
-  let overviewMarkers: Marker[] = []
-
-  /** Drops the bird's-eye boards. */
-  const clearOverviewMarkers = (fade: boolean): void => {
-    const dying = overviewMarkers
-    overviewMarkers = []
-    for (const board of dying) {
-      board.getElement().classList.remove('is-visible')
-      if (!fade) {
-        board.remove()
-      }
-    }
-    if (fade) {
-      window.setTimeout(() => {
-        for (const board of dying) {
-          board.remove()
-        }
-      }, 400)
-    }
-  }
-
-  /** Stands the main overview boards on their geographic points. */
-  const showOverviewMarkers = (loaded: readonly ReplayPlace[]): void => {
-    if (replayState !== 'INTRO_OVERVIEW') {
-      return
-    }
-    clearOverviewMarkers(false)
-    for (const place of pickOverviewPlaces(loaded)) {
-      const parts = makeBillboard()
-      fillBillboard(parts, place)
-      const board = new Marker({
-        element: parts.root,
-        anchor: 'bottom',
-        rotationAlignment: 'viewport',
-        pitchAlignment: 'viewport',
-        opacityWhenCovered: 1,
-      })
-        .setLngLat([place.lng, place.lat])
-        .addTo(map)
-      board.getElement().classList.add('is-visible')
-      parts.wrapper.classList.add('is-visible')
-      overviewMarkers.push(board)
-    }
-  }
 
   /** Fills the reused chase board and pops it in or out. */
   const paintPlace = (here: GeoPoint): void => {
@@ -520,7 +475,9 @@ export async function mountReplayMap(
   let lastLineAt = 0
   let lastLineVertex = -1
 
-  const placesReady = fetchReplayPlaces(options.points, placesAbort.signal)
+  void fetchReplayPlaces(options.points, placesAbort.signal).then((loaded) => {
+    places = snapPlacesToRoute(loaded, latestPoints)
+  })
 
   /** Writes lng/lat pairs without cloning the GeoJSON wrapper twice. */
   const toCoords = (points: readonly GeoPoint[]): [number, number][] =>
@@ -630,7 +587,7 @@ export async function mountReplayMap(
     map.fitBounds(bounds, {
       pitch: OVERVIEW_PITCH,
       bearing: 0,
-      padding: { top: 90, bottom: 90, left: 70, right: 70 },
+      padding: { top: 80, bottom: 80, left: 60, right: 60 },
       duration: 0,
     })
   }
@@ -640,17 +597,11 @@ export async function mountReplayMap(
     marker.setLngLat([startPose.marker.lng, startPose.marker.lat]).setRotation(startPose.heading)
     paintPuck(startPose.marker)
   }
-  const loadedPlaces = await placesReady
-  if (!placesAbort.signal.aborted) {
-    places = snapPlacesToRoute(loadedPlaces, latestPoints)
-    showOverviewMarkers(loadedPlaces)
-    await waitMs(OVERVIEW_MS, placesAbort.signal)
-  }
+  await waitMs(OVERVIEW_MS, placesAbort.signal)
   if (placesAbort.signal.aborted) {
     replayState = 'PLAYING'
   } else {
     replayState = 'FLYING_IN'
-    clearOverviewMarkers(true)
     const flyTarget = startPose?.marker ?? start
     const flyBearing = startPose?.bearing ?? 0
     await new Promise<void>((resolve) => {
@@ -700,7 +651,6 @@ export async function mountReplayMap(
       lengths = cumulativeDistances(points)
       void fetchReplayPlaces(points, placesAbort.signal).then((loaded) => {
         places = snapPlacesToRoute(loaded, latestPoints)
-        showOverviewMarkers(loaded)
         const next = chasePose(latestPoints, latestFraction, bearing, true, lengths)
         if (next) {
           paintPlace(next.marker)
@@ -716,7 +666,6 @@ export async function mountReplayMap(
     },
     destroy() {
       placesAbort.abort()
-      clearOverviewMarkers(false)
       map.stop()
       townMarker.remove()
       marker.remove()

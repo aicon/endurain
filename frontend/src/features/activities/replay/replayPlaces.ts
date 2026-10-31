@@ -8,12 +8,6 @@ export const PLACE_SHOW_M = 400
 /** Hide the board once the athlete is farther than this, in metres. */
 export const PLACE_HIDE_M = 600
 
-/** How many boards the overview camera may show. */
-export const OVERVIEW_PLACE_LIMIT = 8
-
-/** Overview boards closer than this, in metres, are dropped. */
-export const OVERVIEW_SEPARATION_M = 3000
-
 /** Drop a POI whose closest track point is farther than this. */
 const MAX_OFF_ROUTE_M = 2500
 
@@ -267,54 +261,6 @@ export function pickVisiblePlace(
     return nearest
   }
   return null
-}
-
-/**
- * Rank for the overview camera: peaks, then cities, towns, villages.
- *
- * @param place - Loaded POI.
- */
-function overviewRank(place: ReplayPlace): number {
-  if (place.kind === 'peak') {
-    return 0
-  }
-  if (place.settlement === 'city') {
-    return 1
-  }
-  if (place.settlement === 'town') {
-    return 2
-  }
-  if (place.settlement === 'village') {
-    return 3
-  }
-  return 4
-}
-
-/**
- * Picks a spaced subset of places for the bird's-eye intro.
- *
- * @param places - Overpass / Nominatim hits.
- * @param limit - Maximum boards. Defaults to {@link OVERVIEW_PLACE_LIMIT}.
- */
-export function pickOverviewPlaces(
-  places: readonly ReplayPlace[],
-  limit = OVERVIEW_PLACE_LIMIT,
-): ReplayPlace[] {
-  const ordered = [...places].sort((left, right) => overviewRank(left) - overviewRank(right))
-  const picked: ReplayPlace[] = []
-  for (const place of ordered) {
-    if (picked.length >= limit) {
-      break
-    }
-    const here = { lat: place.lat, lng: place.lng }
-    const crowded = picked.some(
-      (other) => metersBetween(here, { lat: other.lat, lng: other.lng }) < OVERVIEW_SEPARATION_M,
-    )
-    if (!crowded) {
-      picked.push(place)
-    }
-  }
-  return picked
 }
 
 /**
