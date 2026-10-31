@@ -46,7 +46,7 @@ Replay stays on this repository. Do not put this file or `.github/workflows/fork
 
 `ghcr.io/aicon/endurain:0.20.2-place`
 
-Same container layout as upstream v0.20.2, plus the summary-card, device, settlement, elevation-total, altitude-label, tooltip, header-gear, shared chart-cursor, and in-map replay changes above. Digest `sha256:852a6df2a4ea0da1c183959ac2937a67771dca6b5b64fb1a34cd81150ad85519` (commit `3cb7d02`, 2026-10-31). Change the compose image tag from `0.20.1-place` to `0.20.2-place`.
+Same container layout as upstream v0.20.2, plus the summary-card, device, settlement, elevation-total, altitude-label, tooltip, header-gear, shared chart-cursor, and in-map replay changes above. Digest `sha256:992e677e1f26df38c93204dc04154443334f92da543e89f9fae9ec5b1d9bb8ae` (commit `427455e`, 2026-10-31). Change the compose image tag from `0.20.1-place` to `0.20.2-place`.
 
 It does not replace `ghcr.io/endurain-project/endurain`. Drop this image when you move back to an official release.
 
