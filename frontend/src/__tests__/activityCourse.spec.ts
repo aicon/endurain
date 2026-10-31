@@ -1,14 +1,16 @@
 import { describe, expect, it } from 'vitest'
 
 import {
-  CAMERA_LERP,
+  CAMERA_LERP_IN,
+  CAMERA_LERP_OUT,
   LOOK_AT_M,
   PITCH_FAST,
   PITCH_SLOW,
-  TURN_ZOOM_BOOST,
+  PITCH_TURN,
   TURN_ZOOM_DEG,
   ZOOM_FAST,
   ZOOM_SLOW,
+  ZOOM_TURN,
   bearingDegrees,
   chasePose,
   courseBearing,
@@ -174,9 +176,9 @@ describe('framingFromSpeedKmh', () => {
   })
 
   it('pulls in on a hairpin even at speed', () => {
-    const zoom = framingFromSpeedKmh(50, 90).zoom
-    expect(zoom).toBeCloseTo(ZOOM_FAST + TURN_ZOOM_BOOST, 5)
-    expect(zoom).toBeGreaterThan(ZOOM_FAST + 0.5)
+    const pose = framingFromSpeedKmh(50, 90)
+    expect(pose.zoom).toBeCloseTo(ZOOM_TURN, 5)
+    expect(pose.pitch).toBeCloseTo(PITCH_TURN, 5)
   })
 })
 
@@ -185,7 +187,7 @@ describe('turnAngleDegrees', () => {
     expect(turnAngleDegrees(350, 10)).toBeCloseTo(20, 5)
     expect(turnZoomBoost(TURN_ZOOM_DEG)).toBe(0)
     expect(turnZoomBoost(20)).toBe(0)
-    expect(turnZoomBoost(90)).toBeCloseTo(TURN_ZOOM_BOOST, 5)
+    expect(turnZoomBoost(90)).toBeCloseTo(1, 5)
   })
 })
 
@@ -196,10 +198,11 @@ describe('easeFraming', () => {
     ).toEqual({ zoom: ZOOM_FAST, pitch: PITCH_FAST })
   })
 
-  it('moves a twenty-fifth of the gap each frame', () => {
-    const next = easeFraming({ zoom: 16, pitch: 60 }, { zoom: 17, pitch: 50 }, false)
-    expect(next.zoom).toBeCloseTo(16 + CAMERA_LERP, 5)
-    expect(next.pitch).toBeCloseTo(60 + (50 - 60) * CAMERA_LERP, 5)
+  it('closes faster than it pulls out', () => {
+    const closer = easeFraming({ zoom: 16, pitch: 60 }, { zoom: 17, pitch: 50 }, false)
+    expect(closer.zoom).toBeCloseTo(16 + CAMERA_LERP_IN, 5)
+    const wider = easeFraming({ zoom: 17, pitch: 60 }, { zoom: 16, pitch: 50 }, false)
+    expect(wider.zoom).toBeCloseTo(17 + (16 - 17) * CAMERA_LERP_OUT, 5)
   })
 })
 

@@ -105,7 +105,7 @@ class SecurityHeadersMiddleware(BaseHTTPMiddleware):
                 connect_src = f"{connect_src} {' '.join(extra_connect_src)}"
             connect_src = (
                 f"{connect_src} {tile_domains_str} "
-                "https://tiles.mapterhorn.com https://*.arcgisonline.com"
+                "https://tiles.mapterhorn.com https://*.arcgisonline.com https://overpass-api.de"
             )
 
             response.headers["Content-Security-Policy"] = (

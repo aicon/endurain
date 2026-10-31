@@ -33,27 +33,36 @@ export const MIN_SPEED_KMH = 8
 export const MAX_SPEED_KMH = 45
 
 /** Zoom at {@link MIN_SPEED_KMH}. */
-export const ZOOM_SLOW = 17.4
+export const ZOOM_SLOW = 17.5
 
 /** Zoom at {@link MAX_SPEED_KMH}. */
-export const ZOOM_FAST = 14.5
+export const ZOOM_FAST = 13.9
+
+/** Zoom at a full hairpin ({@link TURN_ZOOM_FULL_DEG}). */
+export const ZOOM_TURN = 18.2
 
 /** Pitch at {@link MIN_SPEED_KMH}, in degrees. */
 export const PITCH_SLOW = 67
 
 /** Pitch at {@link MAX_SPEED_KMH}, in degrees. */
-export const PITCH_FAST = 48
+export const PITCH_FAST = 44
 
-/** Per-frame blend for zoom and pitch. 1 snaps, 0 never moves. */
-export const CAMERA_LERP = 0.025
+/** Pitch at a full hairpin, in degrees. */
+export const PITCH_TURN = 70
+
+/** Per-frame blend when the camera moves in (zoom up). */
+export const CAMERA_LERP_IN = 0.04
+
+/** Per-frame blend when the camera pulls out to panorama. */
+export const CAMERA_LERP_OUT = 0.018
+
+/** Default blend; {@link easeFraming} prefers {@link CAMERA_LERP_IN} on close-up. */
+export const CAMERA_LERP = CAMERA_LERP_IN
 
 /** Pull in when the look-ahead heading differs by more than this, in degrees. */
-export const TURN_ZOOM_DEG = 25
+export const TURN_ZOOM_DEG = 20
 
-/** Extra zoom at a full hairpin ({@link TURN_ZOOM_FULL_DEG}). */
-export const TURN_ZOOM_BOOST = 0.8
-
-/** Turn angle that applies the full {@link TURN_ZOOM_BOOST}, in degrees. */
+/** Turn angle that applies the full close-up, in degrees. */
 export const TURN_ZOOM_FULL_DEG = 90
 
 /** Samples on each side of the cursor used to average speed. */
@@ -527,7 +536,8 @@ export function turnAngleDegrees(currentBearing: number, targetBearing: number):
 }
 
 /**
- * Extra close-up when the path bends harder than {@link TURN_ZOOM_DEG}.
+ * 0–1 mix toward the hairpin close-up when the path bends harder than
+ * {@link TURN_ZOOM_DEG}.
  *
  * @param turnAngle - Degrees from {@link turnAngleDegrees}.
  */
@@ -536,13 +546,13 @@ export function turnZoomBoost(turnAngle: number): number {
     return 0
   }
   const span = TURN_ZOOM_FULL_DEG - TURN_ZOOM_DEG
-  return TURN_ZOOM_BOOST * clamp01((turnAngle - TURN_ZOOM_DEG) / span)
+  return clamp01((turnAngle - TURN_ZOOM_DEG) / span)
 }
 
 /**
  * Zoom and pitch for a ground speed. Slow is close and steep; fast pulls back
- * and flattens into a valley panorama. Sharp turns add zoom so the camera
- * stays with the athlete instead of flying out at mid-corner.
+ * and flattens into a valley panorama. Sharp turns mix toward the hairpin
+ * close-up so the camera stays with the athlete at any speed.
  *
  * @param speedKmh - Smoothed speed in kilometres per hour.
  * @param turnAngle - Look-ahead heading change in degrees.
@@ -552,32 +562,37 @@ export function framingFromSpeedKmh(
   turnAngle = 0,
 ): { zoom: number; pitch: number } {
   const t = clamp01((speedKmh - MIN_SPEED_KMH) / (MAX_SPEED_KMH - MIN_SPEED_KMH))
+  const turn = turnZoomBoost(turnAngle)
   return {
-    zoom: lerp(ZOOM_SLOW, ZOOM_FAST, t) + turnZoomBoost(turnAngle),
-    pitch: lerp(PITCH_SLOW, PITCH_FAST, t),
+    zoom: lerp(lerp(ZOOM_SLOW, ZOOM_FAST, t), ZOOM_TURN, turn),
+    pitch: lerp(lerp(PITCH_SLOW, PITCH_FAST, t), PITCH_TURN, turn),
   }
 }
 
 /**
- * Steps zoom and pitch toward a target. Seek jumps; playback eases.
+ * Steps zoom and pitch toward a target. Seek jumps. Playback eases in faster
+ * than it eases out, so a hairpin snaps close and the panorama lifts slowly.
  *
  * @param current - Last frame.
  * @param target - Speed-derived framing.
  * @param snap - Skip easing.
- * @param amount - Blend per frame. Defaults to {@link CAMERA_LERP}.
+ * @param amount - Blend per frame. Defaults to in/out from zoom direction.
  */
 export function easeFraming(
   current: { zoom: number; pitch: number },
   target: { zoom: number; pitch: number },
   snap: boolean,
-  amount = CAMERA_LERP,
+  amount?: number,
 ): { zoom: number; pitch: number } {
   if (snap) {
     return target
   }
+  const closing =
+    target.zoom > current.zoom || (target.zoom === current.zoom && target.pitch > current.pitch)
+  const mix = amount ?? (closing ? CAMERA_LERP_IN : CAMERA_LERP_OUT)
   return {
-    zoom: lerp(current.zoom, target.zoom, amount),
-    pitch: lerp(current.pitch, target.pitch, amount),
+    zoom: lerp(current.zoom, target.zoom, mix),
+    pitch: lerp(current.pitch, target.pitch, mix),
   }
 }
 

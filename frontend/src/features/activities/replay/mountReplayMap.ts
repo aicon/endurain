@@ -5,17 +5,24 @@ import 'maplibre-gl/dist/maplibre-gl.css'
 import type { GeoPoint } from '@/composables/useMapProvider'
 
 import {
+  fetchReplayPlaces,
+  pickVisiblePlace,
+  placeCaption,
+  type ReplayPlace,
+} from '@/features/activities/replay/replayPlaces'
+import {
   chasePose,
   cumulativeDistances,
   distanceAlongFraction,
   easeFraming,
   framingFromSpeedKmh,
   indexAtDistance,
-  turnAngleDegrees,
   mpsToKmh,
   speedMpsAtFraction,
   splitRouteAtDistance,
+  turnAngleDegrees,
 } from '@/features/activities/utils/course'
+import '@/features/activities/replay/replayPlaceLabel.css'
 
 // The bundled worker must be a same-origin file. MapLibre's default URL points
 // at a script that Vite does not emit, and a blob: worker is blocked by the
@@ -351,6 +358,66 @@ export async function mountReplayMap(
     .setLngLat([start.lng, start.lat])
     .addTo(map)
 
+  const placeEl = document.createElement('div')
+  placeEl.className = 'replay-place-label'
+  placeEl.setAttribute('aria-hidden', 'true')
+  const placeIcon = document.createElement('span')
+  placeIcon.className = 'replay-place-label__icon'
+  const placeTitle = document.createElement('span')
+  const placeDot = document.createElement('span')
+  placeDot.className = 'replay-place-label__dot'
+  placeDot.textContent = '•'
+  const placeDetail = document.createElement('span')
+  placeDetail.className = 'replay-place-label__detail'
+  placeEl.append(placeIcon, placeTitle)
+  const placeMarker = new Marker({
+    element: placeEl,
+    anchor: 'bottom',
+    offset: [0, -14],
+    pitchAlignment: 'viewport',
+  }).setLngLat([start.lng, start.lat])
+
+  const placesAbort = new AbortController()
+  let places: ReplayPlace[] = []
+  let shownPlace: ReplayPlace | null = null
+  void fetchReplayPlaces(options.points, placesAbort.signal).then((loaded) => {
+    places = loaded
+  })
+
+  /** Fills the reused board and pops it in or out. */
+  const paintPlace = (here: GeoPoint): void => {
+    const next = pickVisiblePlace(here, places, shownPlace)
+    if (!next) {
+      if (shownPlace) {
+        placeEl.classList.remove('is-visible')
+        placeEl.classList.add('is-leaving')
+        shownPlace = null
+      }
+      return
+    }
+    if (shownPlace?.id !== next.id) {
+      const caption = placeCaption(next)
+      placeIcon.textContent = caption.icon
+      placeTitle.textContent = caption.title
+      if (caption.detail) {
+        placeDetail.textContent = caption.detail
+        if (!placeDot.isConnected) {
+          placeEl.append(placeDot, placeDetail)
+        }
+      } else {
+        placeDot.remove()
+        placeDetail.remove()
+      }
+      placeMarker.setLngLat([next.lng, next.lat])
+      if (!placeEl.isConnected || !shownPlace) {
+        placeMarker.addTo(map)
+      }
+    }
+    shownPlace = next
+    placeEl.classList.remove('is-leaving')
+    placeEl.classList.add('is-visible')
+  }
+
   let bearing = 0
   let latestPoints = options.points
   let latestTimes = options.timesMs ?? null
@@ -441,6 +508,7 @@ export async function mountReplayMap(
     })
     marker.setLngLat([pose.marker.lng, pose.marker.lat]).setRotation(pose.heading)
     paintPuck(pose.marker)
+    paintPlace(pose.marker)
     paintLine(snap)
   }
 
@@ -511,13 +579,19 @@ export async function mountReplayMap(
     setTrack(points) {
       latestPoints = points
       lengths = cumulativeDistances(points)
+      void fetchReplayPlaces(points, placesAbort.signal).then((loaded) => {
+        places = loaded
+      })
       const pose = chasePose(latestPoints, latestFraction, bearing, true, lengths)
       const puck = pose?.marker ?? points[0] ?? start
       paintPuck(puck)
+      paintPlace(puck)
       paintLine(true)
     },
     destroy() {
+      placesAbort.abort()
       map.stop()
+      placeMarker.remove()
       marker.remove()
       map.remove()
     },
