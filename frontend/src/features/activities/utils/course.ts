@@ -26,26 +26,35 @@ export const MIN_HEADING_M = 8
 /** Blend toward the new heading each frame. 1 snaps, 0 never turns. */
 export const BEARING_SMOOTH = 0.04
 
-/** Walk / slow climb: close, steep camera. */
-export const MIN_SPEED_KMH = 5
+/** Walk / slow climb / hairpin: close, steep camera. */
+export const MIN_SPEED_KMH = 8
 
-/** Fast descent / sprint: pull back for the next bend. */
-export const MAX_SPEED_KMH = 60
+/** Fast descent / sprint: bird's-eye panorama. */
+export const MAX_SPEED_KMH = 45
 
 /** Zoom at {@link MIN_SPEED_KMH}. */
-export const ZOOM_SLOW = 17.1
+export const ZOOM_SLOW = 17.4
 
 /** Zoom at {@link MAX_SPEED_KMH}. */
-export const ZOOM_FAST = 15.65
+export const ZOOM_FAST = 14.5
 
 /** Pitch at {@link MIN_SPEED_KMH}, in degrees. */
-export const PITCH_SLOW = 65
+export const PITCH_SLOW = 67
 
 /** Pitch at {@link MAX_SPEED_KMH}, in degrees. */
-export const PITCH_FAST = 55
+export const PITCH_FAST = 48
 
 /** Per-frame blend for zoom and pitch. 1 snaps, 0 never moves. */
-export const CAMERA_LERP = 0.03
+export const CAMERA_LERP = 0.025
+
+/** Pull in when the look-ahead heading differs by more than this, in degrees. */
+export const TURN_ZOOM_DEG = 25
+
+/** Extra zoom at a full hairpin ({@link TURN_ZOOM_FULL_DEG}). */
+export const TURN_ZOOM_BOOST = 0.8
+
+/** Turn angle that applies the full {@link TURN_ZOOM_BOOST}, in degrees. */
+export const TURN_ZOOM_FULL_DEG = 90
 
 /** Samples on each side of the cursor used to average speed. */
 const SPEED_HALF_WINDOW = 4
@@ -65,6 +74,8 @@ export interface ChasePose {
   lookAt: GeoPoint
   /** Compass heading the camera looks, 0–360. */
   bearing: number
+  /** Unsmoothed look-ahead heading used for turn-in zoom, 0–360. */
+  lookAhead: number
   /** Compass heading of the path under the athlete, 0–360. */
   heading: number
 }
@@ -437,7 +448,7 @@ export function chasePose(
     along && metersBetween(here, along) >= LOOK_AT_M * 0.4
       ? along
       : offsetMeters(here, bearing, LOOK_AT_M)
-  return { marker: here, lookAt, bearing, heading }
+  return { marker: here, lookAt, bearing, lookAhead: target, heading }
 }
 
 /**
@@ -506,15 +517,43 @@ export function lerp(from: number, to: number, amount: number): number {
 }
 
 /**
+ * Absolute heading change along the short arc, in degrees.
+ *
+ * @param currentBearing - Camera heading now.
+ * @param targetBearing - Look-ahead heading.
+ */
+export function turnAngleDegrees(currentBearing: number, targetBearing: number): number {
+  return Math.abs(shortestBearingDelta(currentBearing, targetBearing))
+}
+
+/**
+ * Extra close-up when the path bends harder than {@link TURN_ZOOM_DEG}.
+ *
+ * @param turnAngle - Degrees from {@link turnAngleDegrees}.
+ */
+export function turnZoomBoost(turnAngle: number): number {
+  if (turnAngle <= TURN_ZOOM_DEG) {
+    return 0
+  }
+  const span = TURN_ZOOM_FULL_DEG - TURN_ZOOM_DEG
+  return TURN_ZOOM_BOOST * clamp01((turnAngle - TURN_ZOOM_DEG) / span)
+}
+
+/**
  * Zoom and pitch for a ground speed. Slow is close and steep; fast pulls back
- * and flattens so the next bend stays in view.
+ * and flattens into a valley panorama. Sharp turns add zoom so the camera
+ * stays with the athlete instead of flying out at mid-corner.
  *
  * @param speedKmh - Smoothed speed in kilometres per hour.
+ * @param turnAngle - Look-ahead heading change in degrees.
  */
-export function framingFromSpeedKmh(speedKmh: number): { zoom: number; pitch: number } {
+export function framingFromSpeedKmh(
+  speedKmh: number,
+  turnAngle = 0,
+): { zoom: number; pitch: number } {
   const t = clamp01((speedKmh - MIN_SPEED_KMH) / (MAX_SPEED_KMH - MIN_SPEED_KMH))
   return {
-    zoom: lerp(ZOOM_SLOW, ZOOM_FAST, t),
+    zoom: lerp(ZOOM_SLOW, ZOOM_FAST, t) + turnZoomBoost(turnAngle),
     pitch: lerp(PITCH_SLOW, PITCH_FAST, t),
   }
 }

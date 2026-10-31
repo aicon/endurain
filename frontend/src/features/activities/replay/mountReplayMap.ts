@@ -11,6 +11,7 @@ import {
   easeFraming,
   framingFromSpeedKmh,
   indexAtDistance,
+  turnAngleDegrees,
   mpsToKmh,
   speedMpsAtFraction,
   splitRouteAtDistance,
@@ -415,6 +416,7 @@ export async function mountReplayMap(
     if (!pose) {
       return
     }
+    const previousBearing = bearing
     bearing = pose.bearing
     const lookAt =
       snap || !lastLookAt
@@ -426,6 +428,7 @@ export async function mountReplayMap(
     lastLookAt = lookAt
     const target = framingFromSpeedKmh(
       mpsToKmh(speedMpsAtFraction(latestPoints, latestFraction, latestTimes)),
+      turnAngleDegrees(previousBearing, pose.lookAhead),
     )
     const framing = easeFraming({ zoom: currentZoom, pitch: currentPitch }, target, snap)
     currentZoom = framing.zoom

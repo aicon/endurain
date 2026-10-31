@@ -5,6 +5,8 @@ import {
   LOOK_AT_M,
   PITCH_FAST,
   PITCH_SLOW,
+  TURN_ZOOM_BOOST,
+  TURN_ZOOM_DEG,
   ZOOM_FAST,
   ZOOM_SLOW,
   bearingDegrees,
@@ -24,6 +26,8 @@ import {
   speedMpsAtFraction,
   splitRouteAtDistance,
   splitRouteAtFraction,
+  turnAngleDegrees,
+  turnZoomBoost,
 } from '@/features/activities/utils/course'
 
 describe('bearingDegrees', () => {
@@ -156,13 +160,32 @@ describe('chasePose', () => {
 
 describe('framingFromSpeedKmh', () => {
   it('is close and steep when walking', () => {
-    expect(framingFromSpeedKmh(5).zoom).toBeCloseTo(ZOOM_SLOW, 5)
-    expect(framingFromSpeedKmh(5).pitch).toBeCloseTo(PITCH_SLOW, 5)
+    expect(framingFromSpeedKmh(8).zoom).toBeCloseTo(ZOOM_SLOW, 5)
+    expect(framingFromSpeedKmh(8).pitch).toBeCloseTo(PITCH_SLOW, 5)
   })
 
-  it('pulls back and flattens when fast', () => {
-    expect(framingFromSpeedKmh(60).zoom).toBeCloseTo(ZOOM_FAST, 5)
-    expect(framingFromSpeedKmh(60).pitch).toBeCloseTo(PITCH_FAST, 5)
+  it('pulls back into a panorama when fast', () => {
+    expect(framingFromSpeedKmh(45).zoom).toBeCloseTo(ZOOM_FAST, 5)
+    expect(framingFromSpeedKmh(45).pitch).toBeCloseTo(PITCH_FAST, 5)
+  })
+
+  it('stays wide on a fast straight', () => {
+    expect(framingFromSpeedKmh(50, 10).zoom).toBeCloseTo(ZOOM_FAST, 5)
+  })
+
+  it('pulls in on a hairpin even at speed', () => {
+    const zoom = framingFromSpeedKmh(50, 90).zoom
+    expect(zoom).toBeCloseTo(ZOOM_FAST + TURN_ZOOM_BOOST, 5)
+    expect(zoom).toBeGreaterThan(ZOOM_FAST + 0.5)
+  })
+})
+
+describe('turnAngleDegrees', () => {
+  it('uses the short arc across north', () => {
+    expect(turnAngleDegrees(350, 10)).toBeCloseTo(20, 5)
+    expect(turnZoomBoost(TURN_ZOOM_DEG)).toBe(0)
+    expect(turnZoomBoost(20)).toBe(0)
+    expect(turnZoomBoost(90)).toBeCloseTo(TURN_ZOOM_BOOST, 5)
   })
 })
 
@@ -173,7 +196,7 @@ describe('easeFraming', () => {
     ).toEqual({ zoom: ZOOM_FAST, pitch: PITCH_FAST })
   })
 
-  it('moves a thirtieth of the gap each frame', () => {
+  it('moves a twenty-fifth of the gap each frame', () => {
     const next = easeFraming({ zoom: 16, pitch: 60 }, { zoom: 17, pitch: 50 }, false)
     expect(next.zoom).toBeCloseTo(16 + CAMERA_LERP, 5)
     expect(next.pitch).toBeCloseTo(60 + (50 - 60) * CAMERA_LERP, 5)
