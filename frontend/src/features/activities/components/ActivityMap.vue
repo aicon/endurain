@@ -180,6 +180,7 @@ function seek(fraction: number): void {
   }
   emit('replay', next)
   if (next >= 1 && tilted.value) {
+    open.value = false
     restoreOverview()
     return
   }
@@ -208,6 +209,7 @@ function tick(now: number): void {
   moveCursor(step.fraction, true, false)
   if (step.done) {
     playing.value = false
+    open.value = false
     restoreOverview()
     return
   }
@@ -278,7 +280,9 @@ function closeTilted(): void {
 /** Shows the whole Leaflet track after leaving the chase camera. */
 function restoreOverview(): void {
   closeTilted()
-  instance?.recenter()
+  void nextTick(() => {
+    instance?.recenter()
+  })
 }
 
 /** Opens the pitched camera over the current point. */
@@ -387,7 +391,6 @@ onBeforeUnmount(() => {
     <div
       ref="container"
       class="size-full"
-      :class="tilted ? 'invisible' : undefined"
       role="img"
       :aria-label="$t('activities.map.label')"
       @pointerdown="onMapPointerDown"

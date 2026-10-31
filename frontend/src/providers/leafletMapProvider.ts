@@ -201,6 +201,7 @@ export function createLeafletMapProvider(config: LeafletMapProviderConfig = {}):
           draw(next.track)
         },
         recenter(): void {
+          map.invalidateSize()
           fit(currentTrack)
         },
         setCursor(point: GeoPoint | null): void {
