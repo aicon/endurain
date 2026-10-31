@@ -21,7 +21,7 @@ export const CAMERA_BEHIND_M = 40
 export const MIN_HEADING_M = 8
 
 /** Blend toward the new heading each frame. 1 snaps, 0 never turns. */
-export const BEARING_SMOOTH = 0.28
+export const BEARING_SMOOTH = 0.04
 
 /** Walk / slow climb: close, steep camera. */
 export const MIN_SPEED_KMH = 5
@@ -244,30 +244,133 @@ export function courseBearing(
 }
 
 /**
+ * Cumulative path length at each vertex, in metres. `result[0]` is 0.
+ *
+ * @param points - Ordered route.
+ */
+export function cumulativeDistances(points: readonly GeoPoint[]): number[] {
+  const distances = new Array<number>(points.length)
+  distances[0] = 0
+  for (let index = 1; index < points.length; index += 1) {
+    const prev = points[index - 1]
+    const here = points[index]
+    const last = distances[index - 1] ?? 0
+    distances[index] = prev && here ? last + metersBetween(prev, here) : last
+  }
+  return distances
+}
+
+/**
+ * Largest vertex whose cumulative distance is at most `distance`.
+ *
+ * @param cumulative - Path lengths from {@link cumulativeDistances}.
+ * @param distance - Metres from the start.
+ */
+export function indexAtDistance(cumulative: readonly number[], distance: number): number {
+  if (cumulative.length === 0) {
+    return 0
+  }
+  const target = Math.min(cumulative[cumulative.length - 1] ?? 0, Math.max(0, distance))
+  let low = 0
+  let high = cumulative.length - 1
+  while (low < high) {
+    const mid = Math.ceil((low + high) / 2)
+    if ((cumulative[mid] ?? Infinity) <= target) {
+      low = mid
+    } else {
+      high = mid - 1
+    }
+  }
+  return low
+}
+
+/**
+ * Path metres matching a sample-index fraction, interpolating between vertices.
+ *
+ * @param cumulative - Path lengths from {@link cumulativeDistances}.
+ * @param fraction - Position from 0 to 1.
+ */
+export function distanceAlongFraction(cumulative: readonly number[], fraction: number): number {
+  if (cumulative.length === 0) {
+    return 0
+  }
+  if (cumulative.length === 1) {
+    return 0
+  }
+  const floatIndex = clamp01(fraction) * (cumulative.length - 1)
+  const index = Math.min(cumulative.length - 2, Math.floor(floatIndex))
+  const mix = floatIndex - index
+  const a = cumulative[index] ?? 0
+  const b = cumulative[index + 1] ?? a
+  return lerp(a, b, mix)
+}
+
+/**
+ * Point at a path distance. Vertices are lerped, so the cursor is not stuck
+ * on GPS samples.
+ *
+ * @param points - Ordered route.
+ * @param cumulative - Path lengths from {@link cumulativeDistances}.
+ * @param distance - Metres from the start.
+ */
+export function pointAtDistance(
+  points: readonly GeoPoint[],
+  cumulative: readonly number[],
+  distance: number,
+): GeoPoint | null {
+  if (points.length === 0) {
+    return null
+  }
+  const total = cumulative[cumulative.length - 1] ?? 0
+  const along = Math.min(total, Math.max(0, distance))
+  const index = indexAtDistance(cumulative, along)
+  const from = points[index]
+  if (!from) {
+    return null
+  }
+  const to = points[index + 1]
+  const start = cumulative[index] ?? 0
+  const end = cumulative[index + 1] ?? start
+  const span = end - start
+  if (!to || span < 1e-6) {
+    return from
+  }
+  const mix = (along - start) / span
+  return {
+    lat: from.lat + (to.lat - from.lat) * mix,
+    lng: from.lng + (to.lng - from.lng) * mix,
+  }
+}
+
+/**
  * Chase-camera pose: look along the route from just behind the athlete.
  *
  * The map center is a few metres ahead. Pitched MapLibre then places the
  * camera behind the athlete, so the path runs forward instead of a tilted
- * map sliding under a pin.
+ * map sliding under a pin. The marker is the interpolated path point, not a
+ * GPS vertex, so the glow ribbon can end on the same coordinate.
  *
  * @param points - Ordered route.
  * @param fraction - Sample index fraction, 0–1.
  * @param previousBearing - Heading from the last frame.
  * @param snap - Skip heading easing (seek / first frame).
+ * @param cumulative - Optional path lengths; computed when omitted.
  */
 export function chasePose(
   points: readonly GeoPoint[],
   fraction: number,
   previousBearing: number,
   snap = false,
+  cumulative?: readonly number[],
 ): ChasePose | null {
-  const here = walkRoute(points, indexAtFraction(points.length, fraction), 0)
+  const lengths = cumulative ?? cumulativeDistances(points)
+  const distance = distanceAlongFraction(lengths, fraction)
+  const here = pointAtDistance(points, lengths, distance)
   if (!here) {
     return null
   }
-  const index = indexAtFraction(points.length, fraction)
-  const ahead = walkRoute(points, index, LOOK_AHEAD_M) ?? here
-  const behind = walkRoute(points, index, -CAMERA_BEHIND_M) ?? here
+  const ahead = pointAtDistance(points, lengths, distance + LOOK_AHEAD_M) ?? here
+  const behind = pointAtDistance(points, lengths, distance - CAMERA_BEHIND_M) ?? here
   let target = previousBearing
   if (metersBetween(here, ahead) >= MIN_HEADING_M) {
     target = bearingDegrees(here, ahead)
@@ -275,14 +378,14 @@ export function chasePose(
     target = bearingDegrees(behind, here)
   }
   const bearing = snap ? target : mixBearing(previousBearing, target, BEARING_SMOOTH)
-  const near = walkRoute(points, index, MARKER_AHEAD_M) ?? here
+  const near = pointAtDistance(points, lengths, distance + MARKER_AHEAD_M) ?? here
   let heading = bearing
   if (metersBetween(here, near) >= MIN_HEADING_M * 0.5) {
     heading = bearingDegrees(here, near)
   } else if (metersBetween(behind, here) >= MIN_HEADING_M * 0.5) {
     heading = bearingDegrees(behind, here)
   }
-  const along = walkRoute(points, index, LOOK_AT_M)
+  const along = pointAtDistance(points, lengths, distance + LOOK_AT_M)
   const lookAt =
     along && metersBetween(here, along) >= LOOK_AT_M * 0.4
       ? along
@@ -291,8 +394,38 @@ export function chasePose(
 }
 
 /**
- * Splits the polyline at the playback cursor. Both sides include the current
- * vertex so the remaining ghost and the glow ribbon meet at the athlete.
+ * Splits the polyline at a path distance. The interpolated cursor is the last
+ * traveled coordinate and the first remaining coordinate, so the ribbon tip
+ * and the athlete marker share one point.
+ *
+ * @param points - Ordered route.
+ * @param cumulative - Path lengths from {@link cumulativeDistances}.
+ * @param distance - Metres from the start.
+ */
+export function splitRouteAtDistance(
+  points: readonly GeoPoint[],
+  cumulative: readonly number[],
+  distance: number,
+): { traveled: GeoPoint[]; remaining: GeoPoint[] } {
+  if (points.length === 0) {
+    return { traveled: [], remaining: [] }
+  }
+  const here = pointAtDistance(points, cumulative, distance)
+  if (!here) {
+    return { traveled: [], remaining: [] }
+  }
+  const index = indexAtDistance(cumulative, distance)
+  const traveled = points.slice(0, index + 1)
+  const last = traveled[traveled.length - 1]
+  if (!last || metersBetween(last, here) >= 0.01) {
+    traveled.push(here)
+  }
+  const remaining = [here, ...points.slice(index + 1)]
+  return { traveled, remaining }
+}
+
+/**
+ * Splits the polyline at the playback cursor using interpolated path metres.
  *
  * @param points - Ordered route.
  * @param fraction - Position from 0 to 1.
@@ -301,14 +434,8 @@ export function splitRouteAtFraction(
   points: readonly GeoPoint[],
   fraction: number,
 ): { traveled: GeoPoint[]; remaining: GeoPoint[] } {
-  if (points.length === 0) {
-    return { traveled: [], remaining: [] }
-  }
-  const index = indexAtFraction(points.length, fraction)
-  return {
-    traveled: points.slice(0, index + 1),
-    remaining: points.slice(index),
-  }
+  const lengths = cumulativeDistances(points)
+  return splitRouteAtDistance(points, lengths, distanceAlongFraction(lengths, fraction))
 }
 
 /**

@@ -6,11 +6,14 @@ import type { GeoPoint } from '@/composables/useMapProvider'
 
 import {
   chasePose,
+  cumulativeDistances,
+  distanceAlongFraction,
   easeFraming,
   framingFromSpeedKmh,
+  metersBetween,
   mpsToKmh,
   speedMpsAtFraction,
-  splitRouteAtFraction,
+  splitRouteAtDistance,
 } from '@/features/activities/utils/course'
 
 // The bundled worker must be a same-origin file. MapLibre's default URL points
@@ -44,6 +47,9 @@ const ROUTE_CORE = '#ffffff'
 
 /** How strongly the DEM lifts the ground. */
 const TERRAIN_EXAGGERATION = 1.3
+
+/** Skip a line rewrite when the puck has not moved this far. */
+const LINE_MOVE_M = 0.2
 
 /** A tilted map that follows one point on the route. */
 export interface ReplayMap {
@@ -162,7 +168,12 @@ export async function mountReplayMap(
   options: ReplayMapOptions,
 ): Promise<ReplayMap> {
   const start = options.points[0] ?? { lat: 0, lng: 0 }
-  const opening = splitRouteAtFraction(options.points, options.fraction ?? 0)
+  let lengths = cumulativeDistances(options.points)
+  const opening = splitRouteAtDistance(
+    options.points,
+    lengths,
+    distanceAlongFraction(lengths, options.fraction ?? 0),
+  )
   target.style.width = '100%'
   target.style.height = '100%'
   target.style.backgroundColor = FOG_COLOR
@@ -318,30 +329,69 @@ export async function mountReplayMap(
   )
   let currentZoom = startFraming.zoom
   let currentPitch = startFraming.pitch
+  const traveledFeature = routeLine(opening.traveled)
+  const remainFeature = routeLine(opening.remaining)
+  const puckFeature = routePuck(start)
+  let lastPainted: GeoPoint | null = null
 
-  /** Paints traveled glow, remaining ghost, and the lead puck. */
-  const paintRoute = (points: readonly GeoPoint[], fraction: number, puck: GeoPoint): void => {
-    const split = splitRouteAtFraction(points, fraction)
-    const remain = map.getSource('route-remain')
-    if (remain instanceof GeoJSONSource) {
-      remain.setData(routeLine(split.remaining))
-    }
-    const traveled = map.getSource('route-traveled')
-    if (traveled instanceof GeoJSONSource) {
-      traveled.setData(routeLine(split.traveled))
-    }
+  /** Writes lng/lat pairs without cloning the GeoJSON wrapper twice. */
+  const toCoords = (points: readonly GeoPoint[]): [number, number][] =>
+    points.map((point) => [point.lng, point.lat])
+
+  /** Paints traveled glow, remaining ghost, and the lead puck on `puck`. */
+  const paintRoute = (puck: GeoPoint, snap: boolean): void => {
+    const moved = lastPainted == null || metersBetween(lastPainted, puck) >= LINE_MOVE_M
+    lastPainted = puck
+    puckFeature.geometry.coordinates = [puck.lng, puck.lat]
     const puckSource = map.getSource('puck')
     if (puckSource instanceof GeoJSONSource) {
-      puckSource.setData(routePuck(puck))
+      puckSource.setData(puckFeature)
     }
     const pulse = 0.5 + 0.5 * Math.sin(performance.now() / 280)
     map.setPaintProperty('replay-puck-halo', 'circle-radius', 8 + pulse * 4)
     map.setPaintProperty('replay-puck-halo', 'circle-opacity', 0.28 + pulse * 0.22)
+    if (!snap && !moved && traveledFeature.geometry.coordinates.length > 0) {
+      const head = traveledFeature.geometry.coordinates
+      const last = head[head.length - 1]
+      if (last) {
+        last[0] = puck.lng
+        last[1] = puck.lat
+      }
+      const remainHead = remainFeature.geometry.coordinates[0]
+      if (remainHead) {
+        remainHead[0] = puck.lng
+        remainHead[1] = puck.lat
+      }
+      const traveled = map.getSource('route-traveled')
+      if (traveled instanceof GeoJSONSource) {
+        traveled.setData(traveledFeature)
+      }
+      const remain = map.getSource('route-remain')
+      if (remain instanceof GeoJSONSource) {
+        remain.setData(remainFeature)
+      }
+      return
+    }
+    const split = splitRouteAtDistance(
+      latestPoints,
+      lengths,
+      distanceAlongFraction(lengths, latestFraction),
+    )
+    traveledFeature.geometry.coordinates = toCoords(split.traveled)
+    remainFeature.geometry.coordinates = toCoords(split.remaining)
+    const traveled = map.getSource('route-traveled')
+    if (traveled instanceof GeoJSONSource) {
+      traveled.setData(traveledFeature)
+    }
+    const remain = map.getSource('route-remain')
+    if (remain instanceof GeoJSONSource) {
+      remain.setData(remainFeature)
+    }
   }
 
   /** Looks down the route from just behind the athlete. */
   const aim = (snap: boolean): void => {
-    const pose = chasePose(latestPoints, latestFraction, bearing, snap)
+    const pose = chasePose(latestPoints, latestFraction, bearing, snap, lengths)
     if (!pose) {
       return
     }
@@ -367,7 +417,7 @@ export async function mountReplayMap(
       zoom: currentZoom,
     })
     marker.setLngLat([pose.marker.lng, pose.marker.lat]).setRotation(pose.heading)
-    paintRoute(latestPoints, latestFraction, pose.marker)
+    paintRoute(pose.marker, snap)
   }
 
   map.on('error', (event) => {
@@ -392,12 +442,12 @@ export async function mountReplayMap(
     'atmosphere-blend': 0.72,
   })
   collapseAttribution(map)
-  const intro = chasePose(latestPoints, latestFraction, 0, true)
+  const intro = chasePose(latestPoints, latestFraction, 0, true, lengths)
   if (intro) {
     bearing = intro.bearing
     lastLookAt = intro.lookAt
     marker.setLngLat([intro.marker.lng, intro.marker.lat]).setRotation(intro.heading)
-    paintRoute(latestPoints, latestFraction, intro.marker)
+    paintRoute(intro.marker, true)
     map.jumpTo({
       center: [intro.lookAt.lng, intro.lookAt.lat],
       bearing,
@@ -421,7 +471,10 @@ export async function mountReplayMap(
 
   return {
     follow(points, fraction, snap = false, timesMs) {
-      latestPoints = points
+      if (points !== latestPoints) {
+        latestPoints = points
+        lengths = cumulativeDistances(points)
+      }
       latestFraction = fraction
       if (timesMs !== undefined) {
         latestTimes = timesMs
@@ -432,8 +485,9 @@ export async function mountReplayMap(
     },
     setTrack(points) {
       latestPoints = points
-      const pose = chasePose(latestPoints, latestFraction, bearing, true)
-      paintRoute(points, latestFraction, pose?.marker ?? points[0] ?? start)
+      lengths = cumulativeDistances(points)
+      const pose = chasePose(latestPoints, latestFraction, bearing, true, lengths)
+      paintRoute(pose?.marker ?? points[0] ?? start, true)
     },
     destroy() {
       map.stop()

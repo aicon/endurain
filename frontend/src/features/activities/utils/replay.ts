@@ -123,7 +123,14 @@ export function replayStep(input: ReplayStepInput): ReplayStep {
       return { fraction: 1, done: true }
     }
     const index = indexAtTime(times, target)
-    return { fraction: index / (length - 1), done: false }
+    const next = index + 1
+    const from = times[index] ?? target
+    const to = times[next]
+    if (to == null || to <= from) {
+      return { fraction: index / (length - 1), done: false }
+    }
+    const mix = Math.min(1, Math.max(0, (target - from) / (to - from)))
+    return { fraction: (index + mix) / (length - 1), done: false }
   }
   const duration = (length - 1) * FALLBACK_SAMPLE_MS
   const fraction = Math.min(1, start + (elapsed * speed) / duration)

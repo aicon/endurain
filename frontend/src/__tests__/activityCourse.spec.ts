@@ -10,13 +10,17 @@ import {
   bearingDegrees,
   chasePose,
   courseBearing,
+  cumulativeDistances,
+  distanceAlongFraction,
   easeFraming,
   framingFromSpeedKmh,
   metersBetween,
   mixBearing,
   mpsToKmh,
+  pointAtDistance,
   shortestBearingDelta,
   speedMpsAtFraction,
+  splitRouteAtDistance,
   splitRouteAtFraction,
 } from '@/features/activities/utils/course'
 
@@ -175,15 +179,56 @@ describe('splitRouteAtFraction', () => {
     { lat: 0, lng: 3 },
   ]
 
-  it('keeps the cursor vertex on both sides', () => {
+  it('ends the traveled line on the interpolated cursor', () => {
     const split = splitRouteAtFraction(points, 0.5)
-    expect(split.traveled).toEqual([points[0], points[1], points[2]])
-    expect(split.remaining).toEqual([points[2], points[3]])
+    const tip = split.traveled[split.traveled.length - 1]
+    expect(tip).toEqual(split.remaining[0])
+    expect(tip?.lng).toBeCloseTo(1.5, 5)
+    expect(split.traveled[0]).toEqual(points[0])
+    expect(split.traveled[1]).toEqual(points[1])
+    expect(split.remaining[split.remaining.length - 1]).toEqual(points[3])
   })
 
   it('puts the whole route on remaining at the start', () => {
     const split = splitRouteAtFraction(points, 0)
     expect(split.traveled).toEqual([points[0]])
     expect(split.remaining).toEqual(points)
+  })
+})
+
+describe('pointAtDistance', () => {
+  const points = [
+    { lat: 0, lng: 0 },
+    { lat: 0, lng: 0.001 },
+    { lat: 0, lng: 0.002 },
+  ]
+  const lengths = cumulativeDistances(points)
+
+  it('lerps between vertices', () => {
+    const mid = pointAtDistance(points, lengths, (lengths[1] ?? 0) * 0.5)
+    expect(mid?.lng).toBeCloseTo(0.0005, 6)
+  })
+
+  it('matches distanceAlongFraction at the midpoint sample', () => {
+    const distance = distanceAlongFraction(lengths, 0.5)
+    const here = pointAtDistance(points, lengths, distance)
+    expect(here?.lng).toBeCloseTo(0.001, 6)
+  })
+})
+
+describe('splitRouteAtDistance', () => {
+  it('pins the ribbon tip to the same coordinate as the cursor', () => {
+    const points = [
+      { lat: 0, lng: 0 },
+      { lat: 0, lng: 0.001 },
+      { lat: 0, lng: 0.002 },
+    ]
+    const lengths = cumulativeDistances(points)
+    const distance = (lengths[1] ?? 0) * 0.4
+    const split = splitRouteAtDistance(points, lengths, distance)
+    const tip = split.traveled[split.traveled.length - 1]
+    const here = pointAtDistance(points, lengths, distance)
+    expect(tip).toEqual(here)
+    expect(split.remaining[0]).toEqual(here)
   })
 })
