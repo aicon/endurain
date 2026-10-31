@@ -43,6 +43,12 @@ const props = withDefaults(
     totalPages?: number
     /** Row count for the built-in loading skeleton. */
     loadingRows?: number
+    /**
+     * Clip overflowing children to the card radius. Turn this off when a
+     * sticky column header must pin against the page, because `overflow:
+     * hidden` on an ancestor stops `position: sticky`.
+     */
+    clip?: boolean
   }>(),
   {
     isLoading: false,
@@ -52,6 +58,7 @@ const props = withDefaults(
     paginated: false,
     totalPages: 1,
     loadingRows: 5,
+    clip: true,
   },
 )
 
@@ -66,7 +73,7 @@ const showPagination = computed(
 </script>
 
 <template>
-  <Card padding="none" class="divide-y divide-border overflow-hidden">
+  <Card padding="none" class="divide-y divide-border" :class="clip ? 'overflow-hidden' : undefined">
     <slot v-if="showHeader && $slots.header" name="header" />
 
     <!-- Loading -->

@@ -130,7 +130,7 @@ const mobileSummary = computed(() => {
     class="flex flex-col gap-1.5 px-4 py-3 transition-colors hover:bg-muted/50 sm:flex-row sm:items-center sm:gap-3"
   >
     <!-- Identity: type icon, linked name, date · location, mobile metric summary. -->
-    <div class="flex min-w-0 items-center gap-3 sm:flex-1">
+    <div class="flex min-w-0 w-full items-center gap-3 sm:w-[38%] sm:max-w-sm sm:shrink-0">
       <span
         class="flex size-10 shrink-0 items-center justify-center rounded-full bg-muted text-muted-foreground"
       >
@@ -158,7 +158,7 @@ const mobileSummary = computed(() => {
     </div>
 
     <!-- Headline metrics in fixed columns that align with the list header. -->
-    <div class="hidden shrink-0 items-baseline gap-6 sm:flex">
+    <div class="hidden min-w-0 flex-1 items-baseline justify-end gap-6 sm:flex">
       <div v-for="col in columns" :key="col.key" :class="['tabular-nums', col.cellClass]">
         <p
           v-if="cells[col.key].value !== '--'"

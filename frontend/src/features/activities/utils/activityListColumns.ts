@@ -38,7 +38,7 @@ export const ACTIVITY_METRIC_COLUMNS: readonly ActivityMetricColumn[] = [
   {
     key: 'elevation',
     labelKey: 'activities.list.columns.elevation',
-    cellClass: 'hidden w-16 text-right lg:block',
+    cellClass: 'hidden w-40 shrink-0 text-right whitespace-nowrap lg:block',
   },
 ]
 

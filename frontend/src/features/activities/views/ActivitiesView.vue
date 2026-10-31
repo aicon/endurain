@@ -284,6 +284,7 @@ useRouteQueryReplacement(activitiesQueryState)
         :error-description="t('activities.list.error.description')"
         :retry-label="t('activities.list.error.retry')"
         paginated
+        :clip="false"
         :total-pages="totalPages"
         @retry="refetch"
       >
@@ -356,15 +357,17 @@ useRouteQueryReplacement(activitiesQueryState)
 
         <div>
           <!-- Aligned column headers (desktop); cell classes match ActivityListItem. -->
-          <div class="hidden border-b border-border px-4 py-2 sm:flex sm:items-center sm:gap-3">
-            <span class="flex-1 ps-13 text-caption">{{
+          <div
+            class="sticky top-below-nav z-20 hidden border-b border-border bg-card px-4 py-2 sm:flex sm:items-center sm:gap-3"
+          >
+            <span class="min-w-0 w-[38%] max-w-sm ps-13 text-caption">{{
               t('activities.list.columns.activity')
             }}</span>
-            <div class="flex shrink-0 items-baseline gap-6">
+            <div class="flex min-w-0 flex-1 items-baseline justify-end gap-6">
               <span
                 v-for="col in visibleColumns"
                 :key="col.key"
-                :class="['text-caption', col.cellClass]"
+                :class="['text-caption whitespace-nowrap', col.cellClass]"
               >
                 {{ t(col.labelKey) }}
               </span>
