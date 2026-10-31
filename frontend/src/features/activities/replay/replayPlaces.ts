@@ -14,11 +14,15 @@ const BBOX_PAD_DEG = 0.008
 /** Public Overpass interpreter. */
 export const OVERPASS_URL = 'https://overpass-api.de/api/interpreter'
 
+/** OSM settlement class for the board subtitle. */
+export type SettlementKind = 'city' | 'town' | 'village'
+
 /** Town or summit next to the route. */
 export interface ReplayPlace {
   id: string
   name: string
   kind: 'town' | 'peak'
+  settlement?: SettlementKind
   ele?: number
   lat: number
   lng: number
@@ -118,6 +122,7 @@ export function parseOverpassPlaces(payload: unknown): ReplayPlace[] {
       id: `${isPeak ? 'peak' : 'town'}:${node.id ?? `${node.lat},${node.lon}`}`,
       name,
       kind: isPeak ? 'peak' : 'town',
+      ...(!isPeak && isTown ? { settlement: placeTag as SettlementKind } : {}),
       ...(Number.isFinite(ele) ? { ele } : {}),
       lat: node.lat,
       lng: node.lon,
@@ -167,16 +172,20 @@ export function pickVisiblePlace(
  *
  * @param place - Town or peak.
  */
-export function placeCaption(place: ReplayPlace): { icon: string; title: string; detail?: string } {
+export function placeCaption(place: ReplayPlace): { icon: string; title: string; subtitle: string } {
   if (place.kind === 'peak') {
     const rounded = place.ele !== undefined ? Math.round(place.ele) : undefined
     return {
       icon: '⛰️',
       title: place.name,
-      ...(rounded !== undefined ? { detail: `${rounded} m` } : {}),
+      subtitle: rounded !== undefined ? `${rounded} M • CSÚCS` : 'CSÚCS',
     }
   }
-  return { icon: '📍', title: place.name }
+  return {
+    icon: '📍',
+    title: place.name,
+    subtitle: place.settlement === 'village' ? 'FALU' : 'VÁROS',
+  }
 }
 
 /**

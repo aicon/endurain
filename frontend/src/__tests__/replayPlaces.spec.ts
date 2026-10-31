@@ -69,7 +69,14 @@ describe('parseOverpassPlaces', () => {
       ],
     })
     expect(places).toEqual([
-      { id: 'town:1', name: 'Eger', kind: 'town', lat: 47.9, lng: 20.37 },
+      {
+        id: 'town:1',
+        name: 'Eger',
+        kind: 'town',
+        settlement: 'town',
+        lat: 47.9,
+        lng: 20.37,
+      },
       { id: 'peak:2', name: 'Nagy-Eged', kind: 'peak', ele: 536.4, lat: 47.91, lng: 20.4 },
     ])
   })
@@ -87,8 +94,17 @@ describe('pickVisiblePlace', () => {
 })
 
 describe('placeCaption', () => {
-  it('formats a peak with rounded elevation', () => {
-    expect(placeCaption(peak)).toEqual({ icon: '⛰️', title: 'Nagy-Eged', detail: '536 m' })
-    expect(placeCaption(town)).toEqual({ icon: '📍', title: 'Eger' })
+  it('formats a peak and a village', () => {
+    expect(placeCaption(peak)).toEqual({
+      icon: '⛰️',
+      title: 'Nagy-Eged',
+      subtitle: '536 M • CSÚCS',
+    })
+    expect(placeCaption(town)).toEqual({ icon: '📍', title: 'Eger', subtitle: 'VÁROS' })
+    expect(placeCaption({ ...town, settlement: 'village', name: 'Dömös' })).toEqual({
+      icon: '📍',
+      title: 'Dömös',
+      subtitle: 'FALU',
+    })
   })
 })

@@ -358,22 +358,33 @@ export async function mountReplayMap(
     .setLngLat([start.lng, start.lat])
     .addTo(map)
 
-  const placeEl = document.createElement('div')
-  placeEl.className = 'replay-place-label'
-  placeEl.setAttribute('aria-hidden', 'true')
-  const placeIcon = document.createElement('span')
-  placeIcon.className = 'replay-place-label__icon'
-  const placeTitle = document.createElement('span')
-  const placeDot = document.createElement('span')
-  placeDot.className = 'replay-place-label__dot'
-  placeDot.textContent = '•'
-  const placeDetail = document.createElement('span')
-  placeDetail.className = 'replay-place-label__detail'
-  placeEl.append(placeIcon, placeTitle)
-  const placeMarker = new Marker({
-    element: placeEl,
+  const townMarkerEl = document.createElement('div')
+  townMarkerEl.className = 'relive-billboard'
+  townMarkerEl.setAttribute('aria-hidden', 'true')
+  const billboard = document.createElement('div')
+  billboard.className = 'relive-billboard-wrapper'
+  const signCard = document.createElement('div')
+  signCard.className = 'relive-sign-card'
+  const signIcon = document.createElement('span')
+  signIcon.className = 'sign-icon'
+  const signContent = document.createElement('div')
+  signContent.className = 'sign-content'
+  const signTitle = document.createElement('span')
+  signTitle.className = 'sign-title'
+  const signSubtitle = document.createElement('span')
+  signSubtitle.className = 'sign-subtitle'
+  signContent.append(signTitle, signSubtitle)
+  signCard.append(signIcon, signContent)
+  const signPole = document.createElement('div')
+  signPole.className = 'relive-sign-pole'
+  const signBase = document.createElement('div')
+  signBase.className = 'relive-sign-base'
+  billboard.append(signCard, signPole, signBase)
+  townMarkerEl.append(billboard)
+  const townMarker = new Marker({
+    element: townMarkerEl,
     anchor: 'bottom',
-    offset: [0, -14],
+    rotationAlignment: 'viewport',
     pitchAlignment: 'viewport',
   }).setLngLat([start.lng, start.lat])
 
@@ -389,33 +400,30 @@ export async function mountReplayMap(
     const next = pickVisiblePlace(here, places, shownPlace)
     if (!next) {
       if (shownPlace) {
-        placeEl.classList.remove('is-visible')
-        placeEl.classList.add('is-leaving')
+        billboard.classList.remove('is-visible')
+        billboard.classList.add('is-leaving')
         shownPlace = null
       }
       return
     }
     if (shownPlace?.id !== next.id) {
       const caption = placeCaption(next)
-      placeIcon.textContent = caption.icon
-      placeTitle.textContent = caption.title
-      if (caption.detail) {
-        placeDetail.textContent = caption.detail
-        if (!placeDot.isConnected) {
-          placeEl.append(placeDot, placeDetail)
-        }
-      } else {
-        placeDot.remove()
-        placeDetail.remove()
+      signIcon.textContent = caption.icon
+      signTitle.textContent = caption.title
+      signSubtitle.textContent = caption.subtitle
+      townMarker.setLngLat([next.lng, next.lat])
+      if (!townMarkerEl.isConnected) {
+        townMarker.addTo(map)
       }
-      placeMarker.setLngLat([next.lng, next.lat])
-      if (!placeEl.isConnected || !shownPlace) {
-        placeMarker.addTo(map)
-      }
+      billboard.classList.remove('is-visible', 'is-leaving')
+      requestAnimationFrame(() => {
+        billboard.classList.add('is-visible')
+      })
+    } else {
+      billboard.classList.remove('is-leaving')
+      billboard.classList.add('is-visible')
     }
     shownPlace = next
-    placeEl.classList.remove('is-leaving')
-    placeEl.classList.add('is-visible')
   }
 
   let bearing = 0
@@ -591,7 +599,7 @@ export async function mountReplayMap(
     destroy() {
       placesAbort.abort()
       map.stop()
-      placeMarker.remove()
+      townMarker.remove()
       marker.remove()
       map.remove()
     },
