@@ -1,8 +1,10 @@
 # Unofficial fork
 
-This is a fork of [Endurain](https://github.com/endurain-project/endurain) v0.20.1. It is not the official project, and it is not endorsed by the Endurain maintainers.
+This is a fork of [Endurain](https://github.com/endurain-project/endurain) v0.20.2. It is not the official project, and it is not endorsed by the Endurain maintainers.
 
 Endurain® is a registered trademark of João Vitória Silva.
+
+Local `master` tracks upstream `master` by rebase. The last sync was 2026-10-31.
 
 ## What this fork changes
 
@@ -30,19 +32,21 @@ On a phone the map sticks under the top bar while the page scrolls, and the char
 
 Hovering one chart draws the same moment on the other charts and moves a point along the route. Hovering the route moves the chart lines. The line is an HTML overlay and the map point only changes position, so the charts are not redrawn on each move.
 
+The activity map can play the recorded GPS stream. The speed buttons still read 0.5×, 1×, 2×, 4× and 8×; playback itself runs at fifteen times the label. While the player is open the map is a pitched MapLibre chase camera (Mapterhorn terrain, no API key). The cursor is a heading chevron. Play starts from a flat map and eases into 3D. Closing the player, or reaching the end of the clip, restores the Leaflet overview. Home thumbnails stay Leaflet. This replay is a new feature on the fork. It is not proposed upstream, and it does not call the Relive service.
+
 Proposed upstream:
 
 - Summary cards, the device, and the settlement: [endurain-project/endurain#847](https://github.com/endurain-project/endurain/pull/847)
 - Elevation total, the Hungarian altitude label, and the tooltip colors: [endurain-project/endurain#854](https://github.com/endurain-project/endurain/pull/854)
 - Gear in the header, and one hover across the charts and the map: [endurain-project/endurain#855](https://github.com/endurain-project/endurain/pull/855)
 
+Replay stays on this repository. Do not put this file or `.github/workflows/fork-image.yml` on those pull requests.
+
 ## Temporary image
 
 `ghcr.io/aicon/endurain:0.20.1-place`
 
-Same container as upstream v0.20.1, plus the summary-card, device, settlement, elevation-total, altitude-label, tooltip, header-gear, and shared chart-cursor changes above. The activity header shows the recording device between the date and the place when the imported file names one. A village or hamlet is stored as the settlement, so the place reads as the settlement and the country, not the country alone. A slow climb and a slow drop are included in the elevation total. Gear is in the header, and the charts and the map share one hover.
-
-Digest `sha256:363dc5086879a4ff6d3e95626c16410a74fc8a33b6f1175ef319f934d3ab3296`.
+Same container layout as upstream, plus the summary-card, device, settlement, elevation-total, altitude-label, tooltip, header-gear, shared chart-cursor, and in-map replay changes above. The published tag name is still `0.20.1-place`. The last built digest is `sha256:1ea4af998b7354d0ad581db11974cf5f116bfae5aa39f48a80390ef0eba2fef4` (commit `2dbd874`, before the 2026-10-31 rebase onto upstream v0.20.2). Rebuild the tag after this rebase before treating the image as current.
 
 It does not replace `ghcr.io/endurain-project/endurain`. Drop this image when you move back to an official release.
 
