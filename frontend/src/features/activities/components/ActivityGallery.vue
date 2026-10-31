@@ -202,8 +202,7 @@ async function confirmDelete(): Promise<void> {
 <template>
   <div
     v-if="slides.length > 0"
-    class="bg-card"
-    :class="sticky ? 'max-lg:sticky max-lg:top-below-nav max-lg:z-20' : undefined"
+    :class="sticky ? 'max-lg:sticky max-lg:top-below-nav max-lg:z-20 max-lg:bg-card' : undefined"
   >
     <div
       class="map-frame relative overflow-hidden rounded-card border border-border"
@@ -385,13 +384,9 @@ async function confirmDelete(): Promise<void> {
 
 <style scoped>
 .map-frame {
-  /* Leaflet tiles use transforms, so overflow:hidden alone leaves the
-     rounded corners filled with the page background. */
-  clip-path: inset(0 round var(--radius-card));
-}
-
-.map-frame :deep(.leaflet-container) {
-  background: transparent;
+  /* The slide row uses transform, which makes overflow:hidden skip the
+     border radius. Clip the frame itself. */
+  clip-path: inset(0 round var(--radius-card, 12px));
 }
 
 .lightbox-enter-active,

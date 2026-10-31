@@ -388,7 +388,7 @@ onBeforeUnmount(() => {
        `isolate` creates a stacking context so Leaflet's internal panes and
        controls (z-index up to 1000) stay contained and never paint over the
        sticky navbar (z-40) or bottom nav while scrolling. -->
-  <div class="relative isolate size-full overflow-hidden">
+  <div class="map-clip relative isolate size-full overflow-hidden">
     <div
       ref="container"
       class="size-full"
@@ -478,8 +478,21 @@ onBeforeUnmount(() => {
 </template>
 
 <style scoped>
+.map-clip {
+  clip-path: inset(0 round var(--radius-card, 12px));
+}
+
 :deep(.leaflet-container) {
   background: transparent;
+  overflow: hidden;
+  border-radius: var(--radius-card, 12px);
+  clip-path: inset(0 round var(--radius-card, 12px));
+}
+
+:deep(.leaflet-pane),
+:deep(.leaflet-tile-pane),
+:deep(.leaflet-map-pane) {
+  border-radius: inherit;
 }
 
 .replay-host {
@@ -502,6 +515,7 @@ onBeforeUnmount(() => {
   inset: 0;
   width: 100%;
   height: 100%;
+  border-radius: inherit;
 }
 
 .replay-host :deep(.maplibregl-ctrl-bottom-right) {

@@ -44,9 +44,9 @@ Replay stays on this repository. Do not put this file or `.github/workflows/fork
 
 ## Temporary image
 
-`ghcr.io/aicon/endurain:0.20.1-place`
+`ghcr.io/aicon/endurain:0.20.2-place`
 
-Same container layout as upstream v0.20.2, plus the summary-card, device, settlement, elevation-total, altitude-label, tooltip, header-gear, shared chart-cursor, and in-map replay changes above. The published tag name is still `0.20.1-place` so an existing compose file does not need a new tag. Digest `sha256:ad9450f42a858f34ba21599733ad86a728f754008526f36b94781bb3cf631a6c` (commit `bcb9f66`, 2026-10-31).
+Same container layout as upstream v0.20.2, plus the summary-card, device, settlement, elevation-total, altitude-label, tooltip, header-gear, shared chart-cursor, and in-map replay changes above. Digest will be recorded after the image is published. Change the compose image tag from `0.20.1-place` to `0.20.2-place`.
 
 It does not replace `ghcr.io/endurain-project/endurain`. Drop this image when you move back to an official release.
 

@@ -27,7 +27,7 @@ jobs:
             runner: ubuntu-24.04-arm
     env:
       IMAGE_NAME: ghcr.io/${{ github.repository }}
-      IMAGE_TAG: 0.20.1-place
+      IMAGE_TAG: 0.20.2-place
 
     steps:
       - name: Checkout code
@@ -63,7 +63,7 @@ jobs:
     needs: build-arch-images
     env:
       IMAGE_NAME: ghcr.io/${{ github.repository }}
-      IMAGE_TAG: 0.20.1-place
+      IMAGE_TAG: 0.20.2-place
 
     steps:
       - name: Login to GitHub Container Registry
