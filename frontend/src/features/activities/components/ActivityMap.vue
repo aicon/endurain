@@ -535,6 +535,14 @@ onBeforeUnmount(() => {
   background-color: #d8e2eb;
 }
 
+.replay-host :deep(.maplibregl-canvas-container) {
+  z-index: 0;
+}
+
+.replay-host :deep(.maplibregl-marker) {
+  z-index: 2;
+}
+
 .replay-host :deep(.maplibregl-ctrl-bottom-right) {
   right: 3.35rem;
   bottom: 0.7rem;

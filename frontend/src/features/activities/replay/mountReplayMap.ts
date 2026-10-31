@@ -36,10 +36,6 @@ const TERRAIN_TILES = 'https://tiles.mapterhorn.com/{z}/{x}/{y}.webp'
 const SATELLITE_TILES =
   'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}'
 
-/** Place names and boundaries over the imagery. */
-const HYBRID_LABEL_TILES =
-  'https://server.arcgisonline.com/ArcGIS/rest/services/Reference/World_Boundaries_and_Places/MapServer/tile/{z}/{y}/{x}'
-
 const SATELLITE_ATTRIBUTION =
   'Tiles &copy; Esri &mdash; Source: Esri, i-cubed, USDA, USGS, AEX, GeoEye, Getmapping, Aerogrid, IGN, IGP, UPR-EGP, and the GIS User Community'
 
@@ -218,12 +214,6 @@ export async function mountReplayMap(
           maxzoom: 18,
           attribution: SATELLITE_ATTRIBUTION,
         },
-        'hybrid-labels': {
-          type: 'raster',
-          tiles: [HYBRID_LABEL_TILES],
-          tileSize: 256,
-          maxzoom: 18,
-        },
         terrain: {
           type: 'raster-dem',
           tiles: [TERRAIN_TILES],
@@ -267,12 +257,6 @@ export async function mountReplayMap(
             'hillshade-shadow-color': '#0a1220',
             'hillshade-highlight-color': '#ffffff',
           },
-        },
-        {
-          id: 'hybrid-labels-layer',
-          type: 'raster',
-          source: 'hybrid-labels',
-          paint: { 'raster-opacity': 0.85, 'raster-fade-duration': 300 },
         },
         {
           id: 'replay-route-remain',
@@ -386,14 +370,13 @@ export async function mountReplayMap(
     anchor: 'bottom',
     rotationAlignment: 'viewport',
     pitchAlignment: 'viewport',
+    opacityWhenCovered: 1,
+    subpixelPositioning: true,
   }).setLngLat([start.lng, start.lat])
 
   const placesAbort = new AbortController()
   let places: ReplayPlace[] = []
   let shownPlace: ReplayPlace | null = null
-  void fetchReplayPlaces(options.points, placesAbort.signal).then((loaded) => {
-    places = loaded
-  })
 
   /** Fills the reused board and pops it in or out. */
   const paintPlace = (here: GeoPoint): void => {
@@ -442,6 +425,14 @@ export async function mountReplayMap(
   const puckFeature = routePuck(start)
   let lastLineAt = 0
   let lastLineVertex = -1
+
+  void fetchReplayPlaces(options.points, placesAbort.signal).then((loaded) => {
+    places = loaded
+    const pose = chasePose(latestPoints, latestFraction, bearing, true, lengths)
+    if (pose) {
+      paintPlace(pose.marker)
+    }
+  })
 
   /** Writes lng/lat pairs without cloning the GeoJSON wrapper twice. */
   const toCoords = (points: readonly GeoPoint[]): [number, number][] =>
@@ -589,6 +580,10 @@ export async function mountReplayMap(
       lengths = cumulativeDistances(points)
       void fetchReplayPlaces(points, placesAbort.signal).then((loaded) => {
         places = loaded
+        const next = chasePose(latestPoints, latestFraction, bearing, true, lengths)
+        if (next) {
+          paintPlace(next.marker)
+        }
       })
       const pose = chasePose(latestPoints, latestFraction, bearing, true, lengths)
       const puck = pose?.marker ?? points[0] ?? start

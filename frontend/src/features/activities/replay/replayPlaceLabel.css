@@ -1,5 +1,6 @@
 .relive-billboard {
   pointer-events: none;
+  z-index: 3;
 }
 
 .relive-billboard-wrapper {

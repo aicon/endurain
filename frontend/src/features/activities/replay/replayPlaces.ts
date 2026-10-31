@@ -3,19 +3,19 @@ import type { GeoPoint } from '@/composables/useMapProvider'
 import { metersBetween } from '@/features/activities/utils/course'
 
 /** Show a place board when the athlete is closer than this, in metres. */
-export const PLACE_SHOW_M = 400
+export const PLACE_SHOW_M = 1500
 
 /** Hide the board once the athlete is farther than this, in metres. */
-export const PLACE_HIDE_M = 600
+export const PLACE_HIDE_M = 2200
 
 /** Extra degrees around the track so a nearby peak still matches. */
-const BBOX_PAD_DEG = 0.008
+const BBOX_PAD_DEG = 0.02
 
 /** Public Overpass interpreter. */
 export const OVERPASS_URL = 'https://overpass-api.de/api/interpreter'
 
 /** OSM settlement class for the board subtitle. */
-export type SettlementKind = 'city' | 'town' | 'village'
+export type SettlementKind = 'city' | 'town' | 'village' | 'hamlet' | 'suburb'
 
 /** Town or summit next to the route. */
 export interface ReplayPlace {
@@ -72,7 +72,7 @@ export function routeBbox(points: readonly GeoPoint[]): RouteBbox | null {
 export function overpassQuery(box: RouteBbox): string {
   return `[out:json][timeout:8];
 (
-  node["place"~"city|town|village"](${box.south},${box.west},${box.north},${box.east});
+  node["place"~"city|town|village|hamlet|suburb"](${box.south},${box.west},${box.north},${box.east});
   node["natural"="peak"](${box.south},${box.west},${box.north},${box.east});
 );
 out body;`
@@ -106,12 +106,17 @@ export function parseOverpassPlaces(payload: unknown): ReplayPlace[] {
       continue
     }
     const tags = node.tags ?? {}
-    const name = tags.name?.trim()
+    const name = (tags['name:hu'] ?? tags.name)?.trim()
     if (!name) {
       continue
     }
     const placeTag = tags.place
-    const isTown = placeTag === 'city' || placeTag === 'town' || placeTag === 'village'
+    const isTown =
+      placeTag === 'city' ||
+      placeTag === 'town' ||
+      placeTag === 'village' ||
+      placeTag === 'hamlet' ||
+      placeTag === 'suburb'
     const isPeak = tags.natural === 'peak'
     if (!isTown && !isPeak) {
       continue
@@ -184,7 +189,7 @@ export function placeCaption(place: ReplayPlace): { icon: string; title: string;
   return {
     icon: '📍',
     title: place.name,
-    subtitle: place.settlement === 'village' ? 'FALU' : 'VÁROS',
+    subtitle: place.settlement === 'village' || place.settlement === 'hamlet' ? 'FALU' : 'VÁROS',
   }
 }
 
@@ -202,9 +207,14 @@ export async function fetchReplayPlaces(
   if (!box) {
     return []
   }
-  const url = `${OVERPASS_URL}?data=${encodeURIComponent(overpassQuery(box))}`
+  const query = overpassQuery(box)
   try {
-    const response = await fetch(url, { signal })
+    const response = await fetch(OVERPASS_URL, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/x-www-form-urlencoded;charset=UTF-8' },
+      body: `data=${encodeURIComponent(query)}`,
+      signal,
+    })
     if (!response.ok) {
       return []
     }

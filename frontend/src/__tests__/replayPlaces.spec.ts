@@ -48,7 +48,7 @@ describe('routeBbox', () => {
 describe('overpassQuery', () => {
   it('asks for towns and peaks in the box', () => {
     const query = overpassQuery({ south: 1, west: 2, north: 3, east: 4 })
-    expect(query).toContain('node["place"~"city|town|village"](1,2,3,4)')
+    expect(query).toContain('node["place"~"city|town|village|hamlet|suburb"](1,2,3,4)')
     expect(query).toContain('node["natural"="peak"](1,2,3,4)')
   })
 })
@@ -104,6 +104,11 @@ describe('placeCaption', () => {
     expect(placeCaption({ ...town, settlement: 'village', name: 'Dömös' })).toEqual({
       icon: '📍',
       title: 'Dömös',
+      subtitle: 'FALU',
+    })
+    expect(placeCaption({ ...town, settlement: 'hamlet', name: 'Pilisszentlélek' })).toEqual({
+      icon: '📍',
+      title: 'Pilisszentlélek',
       subtitle: 'FALU',
     })
   })
