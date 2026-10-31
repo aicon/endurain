@@ -216,6 +216,7 @@ function tick(now: number): void {
 
 /** Starts playback from the current cursor, or from the start at the end. */
 async function play(): Promise<void> {
+  open.value = true
   const current = scrubModel.value
   origin = current >= 1 ? 0 : current
   if (current >= 1) {
@@ -258,11 +259,6 @@ function setSpeed(next: ReplaySpeed): void {
 function cycleSpeed(): void {
   const index = REPLAY_SPEEDS.indexOf(speed.value)
   setSpeed(REPLAY_SPEEDS[(index + 1) % REPLAY_SPEEDS.length] ?? 1)
-}
-
-/** Opens the playback bar. */
-function reveal(): void {
-  open.value = true
 }
 
 /** Hides the playback bar and stops the clock. */
@@ -430,8 +426,8 @@ onBeforeUnmount(() => {
       v-if="replay && points.length > 1 && !open"
       type="button"
       class="absolute right-3 bottom-3 z-[1100] flex size-10 items-center justify-center rounded-full bg-brand text-white shadow-lg transition-colors hover:bg-brand-mid"
-      :aria-label="$t('activities.replay.open')"
-      @click="reveal"
+      :aria-label="$t('activities.replay.play')"
+      @click="void play()"
     >
       <Play class="size-4" />
     </button>

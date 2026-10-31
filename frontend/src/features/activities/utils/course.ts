@@ -6,10 +6,10 @@ import { indexAtFraction } from '@/features/activities/utils/scrub'
 const EARTH_M = 6_371_000
 
 /** How far along the route the camera looks, in metres. */
-export const LOOK_AHEAD_M = 70
+export const LOOK_AHEAD_M = 140
 
 /** How far behind the marker the camera sits, in metres. */
-export const CAMERA_BEHIND_M = 32
+export const CAMERA_BEHIND_M = 90
 
 /** Ignore heading from a move shorter than this, so GPS jitter does not yaw. */
 export const MIN_HEADING_M = 8

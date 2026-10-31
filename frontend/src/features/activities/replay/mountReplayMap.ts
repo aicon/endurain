@@ -18,8 +18,8 @@ const TERRAIN_TILES = 'https://tiles.mapterhorn.com/{z}/{x}/{y}.webp'
 /** Chase-camera tilt, in degrees. Steeper values amplify heading noise. */
 const REPLAY_PITCH = 44
 
-/** Street-level zoom for the chase camera. The viewer can still zoom. */
-const REPLAY_ZOOM = 15
+/** Town-scale zoom so the chase view shows the surroundings, like Strava. */
+const REPLAY_ZOOM = 13
 
 /** A tilted map that follows one point on the route. */
 export interface ReplayMap {
