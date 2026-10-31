@@ -6,6 +6,7 @@ import {
   overpassQuery,
   parseNominatimPlaces,
   parseOverpassPlaces,
+  pickOverviewPlaces,
   pickVisiblePlace,
   placeCaption,
   routeBbox,
@@ -126,6 +127,29 @@ describe('parseNominatimPlaces', () => {
         lng: 20.37,
       },
     ])
+  })
+})
+
+describe('pickOverviewPlaces', () => {
+  it('keeps a peak over a nearby village and spaces the rest', () => {
+    const village: ReplayPlace = {
+      id: 'town:v',
+      name: 'Dömös',
+      kind: 'town',
+      settlement: 'village',
+      lat: 47.91,
+      lng: 20.4,
+    }
+    const farTown: ReplayPlace = {
+      id: 'town:f',
+      name: 'Esztergom',
+      kind: 'town',
+      settlement: 'town',
+      lat: 47.79,
+      lng: 18.74,
+    }
+    const picked = pickOverviewPlaces([village, peak, farTown])
+    expect(picked.map((place) => place.id)).toEqual(['peak:2', 'town:f'])
   })
 })
 

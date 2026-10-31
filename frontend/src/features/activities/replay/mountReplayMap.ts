@@ -1,4 +1,11 @@
-import { AttributionControl, GeoJSONSource, Map, Marker, setWorkerUrl } from 'maplibre-gl'
+import {
+  AttributionControl,
+  GeoJSONSource,
+  LngLatBounds,
+  Map,
+  Marker,
+  setWorkerUrl,
+} from 'maplibre-gl'
 import maplibreWorkerUrl from 'maplibre-gl/dist/maplibre-gl-worker.mjs?url'
 import 'maplibre-gl/dist/maplibre-gl.css'
 
@@ -6,11 +13,15 @@ import type { GeoPoint } from '@/composables/useMapProvider'
 
 import {
   fetchReplayPlaces,
+  pickOverviewPlaces,
   pickVisiblePlace,
   placeCaption,
   type ReplayPlace,
 } from '@/features/activities/replay/replayPlaces'
 import {
+  PITCH_SLOW,
+  ZOOM_SLOW,
+  bearingDegrees,
   chasePose,
   cumulativeDistances,
   distanceAlongFraction,
@@ -48,11 +59,20 @@ const FOG_COLOR = '#d8e2eb'
 /** Zenith of the sky gradient. */
 const SKY_ZENITH = '#6ea8d6'
 
-/** Starting zoom for the 2D-to-3D intro. */
+/** Starting zoom before the overview camera fits the route. */
 const INTRO_ZOOM = 14
 
-/** How long the pitch-in from the flat map lasts, in milliseconds. */
-const INTRO_MS = 1100
+/** Bird's-eye overview, in milliseconds. */
+const OVERVIEW_MS = 2500
+
+/** Fly-in from the overview to the start line, in milliseconds. */
+const FLY_IN_MS = 2000
+
+/** Pitch of the overview camera, in degrees. */
+const OVERVIEW_PITCH = 40
+
+/** Playback camera phase. */
+export type ReplayState = 'INTRO_OVERVIEW' | 'FLYING_IN' | 'PLAYING'
 
 /** Relive-style ribbon glow. */
 const ROUTE_GLOW = '#ff5500'
@@ -115,26 +135,90 @@ function headingArrow(): HTMLElement {
   return wrap
 }
 
-/** Resolves after a MapLibre ease, or after `ms` if the camera never fires. */
-function easeCamera(
-  map: Map,
-  options: { center: [number, number]; bearing: number; pitch: number; zoom: number },
-  ms: number,
-): Promise<void> {
+/** Resolves after `ms`, or sooner when `signal` aborts. */
+function waitMs(ms: number, signal: AbortSignal): Promise<void> {
   return new Promise((resolve) => {
-    let settled = false
-    const finish = (): void => {
-      if (settled) {
-        return
-      }
-      settled = true
-      map.off('moveend', finish)
+    if (signal.aborted) {
       resolve()
+      return
     }
-    map.once('moveend', finish)
-    map.easeTo({ ...options, duration: ms, easing: (t) => 1 - (1 - t) ** 3 })
-    window.setTimeout(finish, ms + 120)
+    const timer = window.setTimeout(resolve, ms)
+    signal.addEventListener(
+      'abort',
+      () => {
+        window.clearTimeout(timer)
+        resolve()
+      },
+      { once: true },
+    )
   })
+}
+
+/** One Relive board: card, pole, glowing base. */
+function makeBillboard(): {
+  root: HTMLElement
+  wrapper: HTMLElement
+  icon: HTMLElement
+  title: HTMLElement
+  subtitle: HTMLElement
+} {
+  const root = document.createElement('div')
+  root.className = 'relive-billboard'
+  root.setAttribute('aria-hidden', 'true')
+  const wrapper = document.createElement('div')
+  wrapper.className = 'relive-billboard-wrapper'
+  const signCard = document.createElement('div')
+  signCard.className = 'relive-sign-card'
+  const icon = document.createElement('span')
+  icon.className = 'sign-icon'
+  const signContent = document.createElement('div')
+  signContent.className = 'sign-content'
+  const title = document.createElement('span')
+  title.className = 'sign-title'
+  const subtitle = document.createElement('span')
+  subtitle.className = 'sign-subtitle'
+  signContent.append(title, subtitle)
+  signCard.append(icon, signContent)
+  const signPole = document.createElement('div')
+  signPole.className = 'relive-sign-pole'
+  const signBase = document.createElement('div')
+  signBase.className = 'relive-sign-base'
+  wrapper.append(signCard, signPole, signBase)
+  root.append(wrapper)
+  return { root, wrapper, icon, title, subtitle }
+}
+
+/** Writes a place name onto a board. */
+function fillBillboard(
+  parts: { icon: HTMLElement; title: HTMLElement; subtitle: HTMLElement },
+  place: ReplayPlace,
+): void {
+  const caption = placeCaption(place)
+  parts.icon.textContent = caption.icon
+  parts.title.textContent = caption.title
+  parts.subtitle.textContent = caption.subtitle
+}
+
+/** Compass heading from the start of the route toward the finish. */
+function routeOverviewBearing(points: readonly GeoPoint[]): number {
+  const first = points[0]
+  const last = points[points.length - 1]
+  if (!first || !last || (first.lat === last.lat && first.lng === last.lng)) {
+    return 0
+  }
+  return bearingDegrees(first, last)
+}
+
+/** MapLibre box around the GPS track. */
+function routeLngLatBounds(points: readonly GeoPoint[]): LngLatBounds | null {
+  if (points.length === 0) {
+    return null
+  }
+  const bounds = new LngLatBounds()
+  for (const point of points) {
+    bounds.extend([point.lng, point.lat])
+  }
+  return bounds
 }
 
 /** Collapses the credit to the info button so it does not cover the map. */
@@ -187,11 +271,8 @@ export async function mountReplayMap(
 ): Promise<ReplayMap> {
   const start = options.points[0] ?? { lat: 0, lng: 0 }
   let lengths = cumulativeDistances(options.points)
-  const opening = splitRouteAtDistance(
-    options.points,
-    lengths,
-    distanceAlongFraction(lengths, options.fraction ?? 0),
-  )
+  const fullRoute = routeLine(options.points)
+  const emptyRoute = routeLine([])
   target.style.width = '100%'
   target.style.height = '100%'
   target.style.backgroundColor = FOG_COLOR
@@ -223,11 +304,11 @@ export async function mountReplayMap(
         },
         'route-remain': {
           type: 'geojson',
-          data: routeLine(opening.remaining),
+          data: emptyRoute,
         },
         'route-traveled': {
           type: 'geojson',
-          data: routeLine(opening.traveled),
+          data: fullRoute,
         },
         puck: {
           type: 'geojson',
@@ -342,31 +423,9 @@ export async function mountReplayMap(
     .setLngLat([start.lng, start.lat])
     .addTo(map)
 
-  const townMarkerEl = document.createElement('div')
-  townMarkerEl.className = 'relive-billboard'
-  townMarkerEl.setAttribute('aria-hidden', 'true')
-  const billboard = document.createElement('div')
-  billboard.className = 'relive-billboard-wrapper'
-  const signCard = document.createElement('div')
-  signCard.className = 'relive-sign-card'
-  const signIcon = document.createElement('span')
-  signIcon.className = 'sign-icon'
-  const signContent = document.createElement('div')
-  signContent.className = 'sign-content'
-  const signTitle = document.createElement('span')
-  signTitle.className = 'sign-title'
-  const signSubtitle = document.createElement('span')
-  signSubtitle.className = 'sign-subtitle'
-  signContent.append(signTitle, signSubtitle)
-  signCard.append(signIcon, signContent)
-  const signPole = document.createElement('div')
-  signPole.className = 'relive-sign-pole'
-  const signBase = document.createElement('div')
-  signBase.className = 'relive-sign-base'
-  billboard.append(signCard, signPole, signBase)
-  townMarkerEl.append(billboard)
+  const chaseBoard = makeBillboard()
   const townMarker = new Marker({
-    element: townMarkerEl,
+    element: chaseBoard.root,
     anchor: 'bottom',
     rotationAlignment: 'viewport',
     pitchAlignment: 'viewport',
@@ -379,32 +438,77 @@ export async function mountReplayMap(
   const placesAbort = new AbortController()
   let places: ReplayPlace[] = []
   let shownPlace: ReplayPlace | null = null
+  let replayState: ReplayState = 'INTRO_OVERVIEW'
+  let overviewMarkers: Marker[] = []
 
-  /** Fills the reused board and pops it in or out. */
+  /** Drops the bird's-eye boards. */
+  const clearOverviewMarkers = (fade: boolean): void => {
+    const dying = overviewMarkers
+    overviewMarkers = []
+    for (const board of dying) {
+      board.getElement().classList.remove('is-visible')
+      if (!fade) {
+        board.remove()
+      }
+    }
+    if (fade) {
+      window.setTimeout(() => {
+        for (const board of dying) {
+          board.remove()
+        }
+      }, 400)
+    }
+  }
+
+  /** Stands the main overview boards on their geographic points. */
+  const showOverviewMarkers = (loaded: readonly ReplayPlace[]): void => {
+    if (replayState !== 'INTRO_OVERVIEW') {
+      return
+    }
+    clearOverviewMarkers(false)
+    for (const place of pickOverviewPlaces(loaded)) {
+      const parts = makeBillboard()
+      fillBillboard(parts, place)
+      const board = new Marker({
+        element: parts.root,
+        anchor: 'bottom',
+        rotationAlignment: 'viewport',
+        pitchAlignment: 'viewport',
+        opacityWhenCovered: 1,
+      })
+        .setLngLat([place.lng, place.lat])
+        .addTo(map)
+      board.getElement().classList.add('is-visible')
+      overviewMarkers.push(board)
+    }
+  }
+
+  /** Fills the reused chase board and pops it in or out. */
   const paintPlace = (here: GeoPoint): void => {
+    if (replayState !== 'PLAYING') {
+      return
+    }
     const next = pickVisiblePlace(here, places, shownPlace)
     if (!next) {
       if (shownPlace) {
-        billboard.classList.remove('is-visible')
-        billboard.classList.add('is-leaving')
+        chaseBoard.root.classList.remove('is-visible')
+        chaseBoard.wrapper.classList.add('is-leaving')
         shownPlace = null
       }
       return
     }
     if (shownPlace?.id !== next.id) {
-      const caption = placeCaption(next)
-      signIcon.textContent = caption.icon
-      signTitle.textContent = caption.title
-      signSubtitle.textContent = caption.subtitle
+      fillBillboard(chaseBoard, next)
       const pole = next.anchor ?? { lat: next.lat, lng: next.lng }
       townMarker.setLngLat([pole.lng, pole.lat])
-      billboard.classList.remove('is-visible', 'is-leaving')
+      chaseBoard.wrapper.classList.remove('is-leaving')
+      chaseBoard.root.classList.remove('is-visible')
       requestAnimationFrame(() => {
-        billboard.classList.add('is-visible')
+        chaseBoard.root.classList.add('is-visible')
       })
     } else {
-      billboard.classList.remove('is-leaving')
-      billboard.classList.add('is-visible')
+      chaseBoard.wrapper.classList.remove('is-leaving')
+      chaseBoard.root.classList.add('is-visible')
     }
     shownPlace = next
   }
@@ -414,23 +518,25 @@ export async function mountReplayMap(
   let latestTimes = options.timesMs ?? null
   let latestFraction = options.fraction ?? 0
   let lastLookAt: { lat: number; lng: number } | null = null
-  let introDone = false
   const startFraming = framingFromSpeedKmh(
     mpsToKmh(speedMpsAtFraction(latestPoints, latestFraction, latestTimes)),
   )
   let currentZoom = startFraming.zoom
   let currentPitch = startFraming.pitch
-  const traveledFeature = routeLine(opening.traveled)
-  const remainFeature = routeLine(opening.remaining)
+  const traveledFeature = routeLine(options.points)
+  const remainFeature = routeLine([])
   const puckFeature = routePuck(start)
   let lastLineAt = 0
   let lastLineVertex = -1
 
   void fetchReplayPlaces(options.points, placesAbort.signal).then((loaded) => {
     places = loaded
-    const pose = chasePose(latestPoints, latestFraction, bearing, true, lengths)
-    if (pose) {
-      paintPlace(pose.marker)
+    showOverviewMarkers(loaded)
+    if (replayState === 'PLAYING') {
+      const pose = chasePose(latestPoints, latestFraction, bearing, true, lengths)
+      if (pose) {
+        paintPlace(pose.marker)
+      }
     }
   })
 
@@ -478,6 +584,9 @@ export async function mountReplayMap(
 
   /** Looks down the route from just behind the athlete. */
   const aim = (snap: boolean): void => {
+    if (replayState !== 'PLAYING') {
+      return
+    }
     const pose = chasePose(latestPoints, latestFraction, bearing, snap, lengths)
     if (!pose) {
       return
@@ -533,33 +642,61 @@ export async function mountReplayMap(
     'atmosphere-blend': 0.72,
   })
   collapseAttribution(map)
-  const intro = chasePose(latestPoints, latestFraction, 0, true, lengths)
-  if (intro) {
-    bearing = intro.bearing
-    lastLookAt = intro.lookAt
-    marker.setLngLat([intro.marker.lng, intro.marker.lat]).setRotation(intro.heading)
-    paintPuck(intro.marker)
-    paintLine(true)
-    map.jumpTo({
-      center: [intro.lookAt.lng, intro.lookAt.lat],
-      bearing,
-      pitch: 0,
-      zoom: INTRO_ZOOM,
+  replayState = 'INTRO_OVERVIEW'
+  const overviewBearing = routeOverviewBearing(latestPoints)
+  const bounds = routeLngLatBounds(latestPoints)
+  if (bounds) {
+    map.fitBounds(bounds, {
+      pitch: OVERVIEW_PITCH,
+      bearing: overviewBearing,
+      padding: { top: 80, bottom: 80, left: 60, right: 60 },
+      duration: 0,
     })
-    await easeCamera(
-      map,
-      {
-        center: [intro.lookAt.lng, intro.lookAt.lat],
-        bearing,
-        pitch: startFraming.pitch,
-        zoom: startFraming.zoom,
-      },
-      INTRO_MS,
-    )
-    currentZoom = startFraming.zoom
-    currentPitch = startFraming.pitch
   }
-  introDone = true
+  const startPose = chasePose(latestPoints, latestFraction, overviewBearing, true, lengths)
+  if (startPose) {
+    bearing = startPose.bearing
+    marker.setLngLat([startPose.marker.lng, startPose.marker.lat]).setRotation(startPose.heading)
+    paintPuck(startPose.marker)
+  }
+  if (places.length > 0) {
+    showOverviewMarkers(places)
+  }
+  await waitMs(OVERVIEW_MS, placesAbort.signal)
+  if (placesAbort.signal.aborted) {
+    replayState = 'PLAYING'
+  } else {
+    replayState = 'FLYING_IN'
+    clearOverviewMarkers(true)
+    const flyTarget = startPose?.marker ?? start
+    const flyBearing = startPose?.bearing ?? overviewBearing
+    await new Promise<void>((resolve) => {
+      let settled = false
+      const finish = (): void => {
+        if (settled) {
+          return
+        }
+        settled = true
+        map.off('moveend', finish)
+        resolve()
+      }
+      map.once('moveend', finish)
+      map.flyTo({
+        center: [flyTarget.lng, flyTarget.lat],
+        zoom: ZOOM_SLOW,
+        pitch: PITCH_SLOW,
+        bearing: flyBearing,
+        duration: FLY_IN_MS,
+        essential: true,
+      })
+      window.setTimeout(finish, FLY_IN_MS + 200)
+    })
+    replayState = 'PLAYING'
+    currentZoom = ZOOM_SLOW
+    currentPitch = PITCH_SLOW
+    lastLookAt = startPose?.lookAt ?? flyTarget
+    paintLine(true)
+  }
 
   return {
     follow(points, fraction, snap = false, timesMs) {
@@ -571,7 +708,7 @@ export async function mountReplayMap(
       if (timesMs !== undefined) {
         latestTimes = timesMs
       }
-      if (introDone) {
+      if (replayState === 'PLAYING') {
         aim(snap)
       }
     },
@@ -580,6 +717,7 @@ export async function mountReplayMap(
       lengths = cumulativeDistances(points)
       void fetchReplayPlaces(points, placesAbort.signal).then((loaded) => {
         places = loaded
+        showOverviewMarkers(loaded)
         const next = chasePose(latestPoints, latestFraction, bearing, true, lengths)
         if (next) {
           paintPlace(next.marker)
@@ -589,10 +727,13 @@ export async function mountReplayMap(
       const puck = pose?.marker ?? points[0] ?? start
       paintPuck(puck)
       paintPlace(puck)
-      paintLine(true)
+      if (replayState === 'PLAYING') {
+        paintLine(true)
+      }
     },
     destroy() {
       placesAbort.abort()
+      clearOverviewMarkers(false)
       map.stop()
       townMarker.remove()
       marker.remove()
