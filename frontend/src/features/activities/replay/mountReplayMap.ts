@@ -70,6 +70,8 @@ export async function mountReplayMap(
 ): Promise<ReplayMap> {
   const color = themeColor('--color-brand')
   const start = options.points[0] ?? { lat: 0, lng: 0 }
+  target.style.width = '100%'
+  target.style.height = '100%'
   const map = new Map({
     container: target,
     center: [start.lng, start.lat],
@@ -134,16 +136,12 @@ export async function mountReplayMap(
     .setLngLat([start.lng, start.lat])
     .addTo(map)
 
-  let loaded = false
   let bearing = 0
   let latestPoints = options.points
   let latestFraction = 0
 
-  /** Points the camera once the style has loaded. */
+  /** Keeps the camera behind the direction of travel. */
   const aim = (): void => {
-    if (!loaded) {
-      return
-    }
     const point = pointAtFraction(latestPoints, latestFraction)
     if (!point) {
       return
@@ -157,20 +155,22 @@ export async function mountReplayMap(
     marker.setLngLat([point.lng, point.lat])
   }
 
-  map.on('load', () => {
-    loaded = true
+  const fit = (): void => {
     map.resize()
     aim()
-  })
+  }
+
+  map.on('load', fit)
   map.on('error', (event) => {
     console.error('Tilted replay map', event.error)
   })
+  requestAnimationFrame(fit)
 
   return {
     follow(points, fraction) {
       latestPoints = points
       latestFraction = fraction
-      aim()
+      fit()
     },
     setTrack(points) {
       latestPoints = points

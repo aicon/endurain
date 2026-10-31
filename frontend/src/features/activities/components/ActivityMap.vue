@@ -297,6 +297,7 @@ async function mountTilted(): Promise<void> {
     return
   }
   replayMap.follow(props.points, scrubModel.value)
+  requestAnimationFrame(() => replayMap?.follow(props.points, scrubModel.value))
 }
 
 /** Re-fits the map to the whole track after the user has panned or zoomed. */
@@ -365,16 +366,21 @@ onBeforeUnmount(() => {
     <div
       ref="container"
       class="size-full"
+      :class="open ? 'invisible' : undefined"
       role="img"
       :aria-label="$t('activities.map.label')"
       @pointerdown="onMapPointerDown"
     />
+    <!-- MapLibre sets `position: relative` on the element it owns. That class
+         must not sit on this overlay: it would drop the camera out of the
+         frame and leave the flat Leaflet map in view. -->
     <div
       v-if="open"
-      ref="replayHost"
-      class="replay-host absolute inset-0 z-[1050]"
+      class="replay-host absolute inset-0 z-[1050] bg-muted"
       @pointerdown="onMapPointerDown"
-    />
+    >
+      <div ref="replayHost" class="size-full" />
+    </div>
     <!-- z above Leaflet's controls (z-1000) so it stays clickable. -->
     <button
       v-if="interactive && points.length > 0"
@@ -447,6 +453,15 @@ onBeforeUnmount(() => {
 </template>
 
 <style scoped>
+.replay-host :deep(.maplibregl-map),
+.replay-host :deep(.maplibregl-canvas-container),
+.replay-host :deep(.maplibregl-canvas) {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+}
+
 .replay-host :deep(.maplibregl-ctrl-bottom-left) {
   bottom: 4.75rem;
 }
