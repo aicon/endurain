@@ -32,7 +32,7 @@ On a phone the map sticks under the top bar while the page scrolls, and the char
 
 Hovering one chart draws the same moment on the other charts and moves a point along the route. Hovering the route moves the chart lines. The line is an HTML overlay and the map point only changes position, so the charts are not redrawn on each move.
 
-The activity map can play the recorded GPS stream. The speed buttons still read 0.5×, 1×, 2×, 4× and 8×; playback itself runs at fifteen times the label. While the player is open the map is a pitched MapLibre chase camera on Esri World Imagery with place labels (Mapterhorn terrain, no API key). The cursor is a heading chevron. Play starts from a flat map and eases into 3D. Closing the player, or reaching the end of the clip, restores the Leaflet overview. Home thumbnails stay Leaflet. This replay is a new feature on the fork. It is not proposed upstream, and it does not call the Relive service.
+The activity map can play the recorded GPS stream. The speed buttons still read 0.5×, 1×, 2×, 4× and 8×; playback itself runs at fifteen times the label. While the player is open the map is a pitched MapLibre chase camera on Esri World Imagery with place labels (Mapterhorn terrain, no API key). Fast straights pull out to a valley panorama; hairpins drop in close. Towns and peaks from Overpass appear as a floating board. The cursor is a heading chevron. Play starts from a flat map and eases into 3D. Closing the player, or reaching the end of the clip, restores the Leaflet overview. Home thumbnails stay Leaflet. This replay is a new feature on the fork. It is not proposed upstream, and it does not call the Relive service.
 
 Proposed upstream:
 
@@ -46,7 +46,7 @@ Replay stays on this repository. Do not put this file or `.github/workflows/fork
 
 `ghcr.io/aicon/endurain:0.20.2-place`
 
-Same container layout as upstream v0.20.2, plus the summary-card, device, settlement, elevation-total, altitude-label, tooltip, header-gear, shared chart-cursor, and in-map replay changes above. Digest `sha256:175f185f980f951575d5d2883c0ca4c89efe925cee6c001fe10b9a199f516ad4` (commit `ba1a081`, 2026-10-31). Change the compose image tag from `0.20.1-place` to `0.20.2-place`.
+Same container layout as upstream v0.20.2, plus the summary-card, device, settlement, elevation-total, altitude-label, tooltip, header-gear, shared chart-cursor, and in-map replay changes above. Digest `sha256:f3c21c771347bd6178c5fdb88c82b9b5821873231b5146b970296833aa6c7108` (commit `470273b`, 2026-10-31). Change the compose image tag from `0.20.1-place` to `0.20.2-place`.
 
 It does not replace `ghcr.io/endurain-project/endurain`. Drop this image when you move back to an official release.
 
