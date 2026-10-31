@@ -4,8 +4,14 @@ import 'maplibre-gl/dist/maplibre-gl.css'
 
 import type { GeoPoint } from '@/composables/useMapProvider'
 
-import { chasePose } from '@/features/activities/utils/course'
-import { themeColor } from '@/lib/themeColor'
+import {
+  chasePose,
+  easeFraming,
+  framingFromSpeedKmh,
+  mpsToKmh,
+  speedMpsAtFraction,
+  splitRouteAtFraction,
+} from '@/features/activities/utils/course'
 
 // The bundled worker must be a same-origin file. MapLibre's default URL points
 // at a script that Vite does not emit, and a blob: worker is blocked by the
@@ -15,17 +21,29 @@ setWorkerUrl(maplibreWorkerUrl)
 /** Open elevation tiles. No API key; the map credits Mapterhorn. */
 const TERRAIN_TILES = 'https://tiles.mapterhorn.com/{z}/{x}/{y}.webp'
 
-/** Forward tilt: the camera sits behind the look-at point and sees the road. */
-const REPLAY_PITCH = 62
+/**
+ * Horizon / fog fill. MapLibre v6 has no Mapbox `setFog()`; atmosphere lives on
+ * `sky`. This colour also paints the canvas so far tiles do not flash white.
+ */
+const FOG_COLOR = '#d8e2eb'
 
-/** Close enough that houses and the path pass by, Relive-style. */
-const REPLAY_ZOOM = 16.5
+/** Zenith of the sky gradient. */
+const SKY_ZENITH = '#6ea8d6'
 
 /** Starting zoom for the 2D-to-3D intro. */
 const INTRO_ZOOM = 14
 
 /** How long the pitch-in from the flat map lasts, in milliseconds. */
 const INTRO_MS = 1100
+
+/** Relive-style ribbon glow. */
+const ROUTE_GLOW = '#ff5500'
+
+/** Bright core of the traveled line. */
+const ROUTE_CORE = '#ffffff'
+
+/** How strongly the DEM lifts the ground. */
+const TERRAIN_EXAGGERATION = 1.3
 
 /** A tilted map that follows one point on the route. */
 export interface ReplayMap {
@@ -34,7 +52,12 @@ export interface ReplayMap {
    *
    * @param snap - Jump instead of easing. Use on seek and the first frame.
    */
-  follow(points: readonly GeoPoint[], fraction: number, snap?: boolean): void
+  follow(
+    points: readonly GeoPoint[],
+    fraction: number,
+    snap?: boolean,
+    timesMs?: readonly number[] | null,
+  ): void
   /** Replaces the drawn route. */
   setTrack(points: readonly GeoPoint[]): void
   /** Releases the WebGL map. */
@@ -51,6 +74,8 @@ export interface ReplayMapOptions {
   attribution: string
   /** Sample fraction to open on, 0–1. */
   fraction?: number
+  /** Epoch milliseconds per point, when the track has a clock. */
+  timesMs?: readonly number[] | null
 }
 
 /** Heading chevron that turns with the route, like Strava's cursor. */
@@ -110,6 +135,18 @@ function routeLine(points: readonly GeoPoint[]) {
   }
 }
 
+/** GeoJSON point for the lead puck. */
+function routePuck(point: GeoPoint) {
+  return {
+    type: 'Feature' as const,
+    properties: {},
+    geometry: {
+      type: 'Point' as const,
+      coordinates: [point.lng, point.lat],
+    },
+  }
+}
+
 /**
  * Mounts a pitched MapLibre map over the activity route.
  *
@@ -124,10 +161,11 @@ export async function mountReplayMap(
   target: HTMLElement,
   options: ReplayMapOptions,
 ): Promise<ReplayMap> {
-  const color = themeColor('--color-brand')
   const start = options.points[0] ?? { lat: 0, lng: 0 }
+  const opening = splitRouteAtFraction(options.points, options.fraction ?? 0)
   target.style.width = '100%'
   target.style.height = '100%'
+  target.style.backgroundColor = FOG_COLOR
   const map = new Map({
     container: target,
     center: [start.lng, start.lat],
@@ -153,32 +191,111 @@ export async function mountReplayMap(
           encoding: 'terrarium',
           attribution: '<a href="https://mapterhorn.com/attribution">© Mapterhorn</a>',
         },
-        route: {
+        'route-remain': {
           type: 'geojson',
-          data: routeLine(options.points),
+          data: routeLine(opening.remaining),
+        },
+        'route-traveled': {
+          type: 'geojson',
+          data: routeLine(opening.traveled),
+        },
+        puck: {
+          type: 'geojson',
+          data: routePuck(start),
         },
       },
       layers: [
         {
           id: 'ground',
           type: 'background',
-          paint: { 'background-color': '#d5e3d8' },
+          paint: { 'background-color': FOG_COLOR },
         },
         { id: 'base', type: 'raster', source: 'base' },
-        { id: 'hillshade', type: 'hillshade', source: 'terrain' },
         {
-          id: 'route',
-          type: 'line',
-          source: 'route',
+          id: 'hillshade',
+          type: 'hillshade',
+          source: 'terrain',
           paint: {
-            'line-color': color,
-            'line-width': 7,
+            'hillshade-illumination-direction': 315,
+            'hillshade-illumination-anchor': 'map',
+            'hillshade-exaggeration': 0.32,
+            'hillshade-shadow-color': '#0a1220',
+            'hillshade-highlight-color': '#ffffff',
+          },
+        },
+        {
+          id: 'replay-route-remain',
+          type: 'line',
+          source: 'route-remain',
+          layout: { 'line-cap': 'round', 'line-join': 'round' },
+          paint: {
+            'line-color': '#ffffff',
+            'line-width': 2,
+            'line-opacity': 0.25,
+          },
+        },
+        {
+          id: 'replay-route-glow',
+          type: 'line',
+          source: 'route-traveled',
+          layout: { 'line-cap': 'round', 'line-join': 'round' },
+          paint: {
+            'line-color': ROUTE_GLOW,
+            'line-width': ['interpolate', ['linear'], ['zoom'], 14, 8, 17, 16],
+            'line-blur': 5,
+            'line-opacity': 0.5,
+          },
+        },
+        {
+          id: 'replay-route-core',
+          type: 'line',
+          source: 'route-traveled',
+          layout: { 'line-cap': 'round', 'line-join': 'round' },
+          paint: {
+            'line-color': ROUTE_CORE,
+            'line-width': 3.5,
+            'line-opacity': 0.95,
+          },
+        },
+        {
+          id: 'replay-puck-halo',
+          type: 'circle',
+          source: 'puck',
+          paint: {
+            'circle-radius': 9,
+            'circle-color': ROUTE_GLOW,
+            'circle-opacity': 0.4,
+            'circle-blur': 0.4,
+            'circle-pitch-alignment': 'map',
+          },
+        },
+        {
+          id: 'replay-puck-core',
+          type: 'circle',
+          source: 'puck',
+          paint: {
+            'circle-radius': 4.5,
+            'circle-color': '#ffffff',
+            'circle-opacity': 0.95,
+            'circle-stroke-width': 1.5,
+            'circle-stroke-color': ROUTE_GLOW,
+            'circle-pitch-alignment': 'map',
           },
         },
       ],
-      terrain: { source: 'terrain', exaggeration: 1.25 },
+      terrain: { source: 'terrain', exaggeration: TERRAIN_EXAGGERATION },
+      sky: {
+        'sky-color': SKY_ZENITH,
+        'horizon-color': FOG_COLOR,
+        'fog-color': FOG_COLOR,
+        'fog-ground-blend': 0.55,
+        'horizon-fog-blend': 0.85,
+        'sky-horizon-blend': 0.18,
+        'atmosphere-blend': 0.72,
+      },
     },
   })
+  map.getCanvas().style.backgroundColor = FOG_COLOR
   map.addControl(new AttributionControl({ compact: true }), 'bottom-right')
 
   const marker = new Marker({
@@ -192,9 +309,35 @@ export async function mountReplayMap(
 
   let bearing = 0
   let latestPoints = options.points
+  let latestTimes = options.timesMs ?? null
   let latestFraction = options.fraction ?? 0
   let lastLookAt: { lat: number; lng: number } | null = null
   let introDone = false
+  const startFraming = framingFromSpeedKmh(
+    mpsToKmh(speedMpsAtFraction(latestPoints, latestFraction, latestTimes)),
+  )
+  let currentZoom = startFraming.zoom
+  let currentPitch = startFraming.pitch
+
+  /** Paints traveled glow, remaining ghost, and the lead puck. */
+  const paintRoute = (points: readonly GeoPoint[], fraction: number, puck: GeoPoint): void => {
+    const split = splitRouteAtFraction(points, fraction)
+    const remain = map.getSource('route-remain')
+    if (remain instanceof GeoJSONSource) {
+      remain.setData(routeLine(split.remaining))
+    }
+    const traveled = map.getSource('route-traveled')
+    if (traveled instanceof GeoJSONSource) {
+      traveled.setData(routeLine(split.traveled))
+    }
+    const puckSource = map.getSource('puck')
+    if (puckSource instanceof GeoJSONSource) {
+      puckSource.setData(routePuck(puck))
+    }
+    const pulse = 0.5 + 0.5 * Math.sin(performance.now() / 280)
+    map.setPaintProperty('replay-puck-halo', 'circle-radius', 8 + pulse * 4)
+    map.setPaintProperty('replay-puck-halo', 'circle-opacity', 0.28 + pulse * 0.22)
+  }
 
   /** Looks down the route from just behind the athlete. */
   const aim = (snap: boolean): void => {
@@ -211,13 +354,20 @@ export async function mountReplayMap(
             lng: lastLookAt.lng + (pose.lookAt.lng - lastLookAt.lng) * 0.35,
           }
     lastLookAt = lookAt
+    const target = framingFromSpeedKmh(
+      mpsToKmh(speedMpsAtFraction(latestPoints, latestFraction, latestTimes)),
+    )
+    const framing = easeFraming({ zoom: currentZoom, pitch: currentPitch }, target, snap)
+    currentZoom = framing.zoom
+    currentPitch = framing.pitch
     map.jumpTo({
       center: [lookAt.lng, lookAt.lat],
       bearing,
-      pitch: REPLAY_PITCH,
-      zoom: REPLAY_ZOOM,
+      pitch: currentPitch,
+      zoom: currentZoom,
     })
     marker.setLngLat([pose.marker.lng, pose.marker.lat]).setRotation(pose.heading)
+    paintRoute(latestPoints, latestFraction, pose.marker)
   }
 
   map.on('error', (event) => {
@@ -232,12 +382,22 @@ export async function mountReplayMap(
     map.once('load', () => resolve())
   })
   map.resize()
+  map.setSky({
+    'sky-color': SKY_ZENITH,
+    'horizon-color': FOG_COLOR,
+    'fog-color': FOG_COLOR,
+    'fog-ground-blend': 0.55,
+    'horizon-fog-blend': 0.85,
+    'sky-horizon-blend': 0.18,
+    'atmosphere-blend': 0.72,
+  })
   collapseAttribution(map)
   const intro = chasePose(latestPoints, latestFraction, 0, true)
   if (intro) {
     bearing = intro.bearing
     lastLookAt = intro.lookAt
     marker.setLngLat([intro.marker.lng, intro.marker.lat]).setRotation(intro.heading)
+    paintRoute(latestPoints, latestFraction, intro.marker)
     map.jumpTo({
       center: [intro.lookAt.lng, intro.lookAt.lat],
       bearing,
@@ -249,28 +409,31 @@ export async function mountReplayMap(
       {
         center: [intro.lookAt.lng, intro.lookAt.lat],
         bearing,
-        pitch: REPLAY_PITCH,
-        zoom: REPLAY_ZOOM,
+        pitch: startFraming.pitch,
+        zoom: startFraming.zoom,
       },
       INTRO_MS,
     )
+    currentZoom = startFraming.zoom
+    currentPitch = startFraming.pitch
   }
   introDone = true
 
   return {
-    follow(points, fraction, snap = false) {
+    follow(points, fraction, snap = false, timesMs) {
       latestPoints = points
       latestFraction = fraction
+      if (timesMs !== undefined) {
+        latestTimes = timesMs
+      }
       if (introDone) {
         aim(snap)
       }
     },
     setTrack(points) {
       latestPoints = points
-      const source = map.getSource('route')
-      if (source instanceof GeoJSONSource) {
-        source.setData(routeLine(points))
-      }
+      const pose = chasePose(latestPoints, latestFraction, bearing, true)
+      paintRoute(points, latestFraction, pose?.marker ?? points[0] ?? start)
     },
     destroy() {
       map.stop()

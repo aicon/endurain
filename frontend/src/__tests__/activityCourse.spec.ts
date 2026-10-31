@@ -1,13 +1,23 @@
 import { describe, expect, it } from 'vitest'
 
 import {
+  CAMERA_LERP,
   LOOK_AT_M,
+  PITCH_FAST,
+  PITCH_SLOW,
+  ZOOM_FAST,
+  ZOOM_SLOW,
   bearingDegrees,
   chasePose,
   courseBearing,
+  easeFraming,
+  framingFromSpeedKmh,
   metersBetween,
   mixBearing,
+  mpsToKmh,
   shortestBearingDelta,
+  speedMpsAtFraction,
+  splitRouteAtFraction,
 } from '@/features/activities/utils/course'
 
 describe('bearingDegrees', () => {
@@ -109,5 +119,71 @@ describe('chasePose', () => {
     }
     expect(pose.heading).toBeCloseTo(90, 0)
     expect(Math.abs(shortestBearingDelta(pose.heading, pose.bearing))).toBeGreaterThan(20)
+  })
+})
+
+describe('framingFromSpeedKmh', () => {
+  it('is close and steep when walking', () => {
+    expect(framingFromSpeedKmh(5).zoom).toBeCloseTo(ZOOM_SLOW, 5)
+    expect(framingFromSpeedKmh(5).pitch).toBeCloseTo(PITCH_SLOW, 5)
+  })
+
+  it('pulls back and flattens when fast', () => {
+    expect(framingFromSpeedKmh(60).zoom).toBeCloseTo(ZOOM_FAST, 5)
+    expect(framingFromSpeedKmh(60).pitch).toBeCloseTo(PITCH_FAST, 5)
+  })
+})
+
+describe('easeFraming', () => {
+  it('jumps on seek', () => {
+    expect(
+      easeFraming({ zoom: 16, pitch: 62 }, { zoom: ZOOM_FAST, pitch: PITCH_FAST }, true),
+    ).toEqual({ zoom: ZOOM_FAST, pitch: PITCH_FAST })
+  })
+
+  it('moves a thirtieth of the gap each frame', () => {
+    const next = easeFraming({ zoom: 16, pitch: 60 }, { zoom: 17, pitch: 50 }, false)
+    expect(next.zoom).toBeCloseTo(16 + CAMERA_LERP, 5)
+    expect(next.pitch).toBeCloseTo(60 + (50 - 60) * CAMERA_LERP, 5)
+  })
+})
+
+describe('speedMpsAtFraction', () => {
+  const east = Array.from({ length: 9 }, (_, index) => ({
+    lat: 0,
+    lng: index * 0.0001,
+  }))
+  const stepM = metersBetween(east[0]!, east[1]!)
+
+  it('uses timestamps when they match the route', () => {
+    const times = east.map((_, index) => index * 1000)
+    const mps = speedMpsAtFraction(east, 0.5, times)
+    expect(mps).toBeCloseTo(stepM, 3)
+    expect(mpsToKmh(mps)).toBeCloseTo(stepM * 3.6, 3)
+  })
+
+  it('treats each sample as one second when the clock is missing', () => {
+    expect(speedMpsAtFraction(east, 0.5, null)).toBeCloseTo(stepM, 3)
+  })
+})
+
+describe('splitRouteAtFraction', () => {
+  const points = [
+    { lat: 0, lng: 0 },
+    { lat: 0, lng: 1 },
+    { lat: 0, lng: 2 },
+    { lat: 0, lng: 3 },
+  ]
+
+  it('keeps the cursor vertex on both sides', () => {
+    const split = splitRouteAtFraction(points, 0.5)
+    expect(split.traveled).toEqual([points[0], points[1], points[2]])
+    expect(split.remaining).toEqual([points[2], points[3]])
+  })
+
+  it('puts the whole route on remaining at the start', () => {
+    const split = splitRouteAtFraction(points, 0)
+    expect(split.traveled).toEqual([points[0]])
+    expect(split.remaining).toEqual(points)
   })
 })

@@ -23,6 +23,33 @@ export const MIN_HEADING_M = 8
 /** Blend toward the new heading each frame. 1 snaps, 0 never turns. */
 export const BEARING_SMOOTH = 0.28
 
+/** Walk / slow climb: close, steep camera. */
+export const MIN_SPEED_KMH = 5
+
+/** Fast descent / sprint: pull back for the next bend. */
+export const MAX_SPEED_KMH = 60
+
+/** Zoom at {@link MIN_SPEED_KMH}. */
+export const ZOOM_SLOW = 17.1
+
+/** Zoom at {@link MAX_SPEED_KMH}. */
+export const ZOOM_FAST = 15.65
+
+/** Pitch at {@link MIN_SPEED_KMH}, in degrees. */
+export const PITCH_SLOW = 65
+
+/** Pitch at {@link MAX_SPEED_KMH}, in degrees. */
+export const PITCH_FAST = 55
+
+/** Per-frame blend for zoom and pitch. 1 snaps, 0 never moves. */
+export const CAMERA_LERP = 0.03
+
+/** Samples on each side of the cursor used to average speed. */
+const SPEED_HALF_WINDOW = 4
+
+/** One second per sample when the track has no clock, matching playback. */
+const FALLBACK_SAMPLE_S = 1
+
 /** Camera pose for one replay frame. */
 export interface ChasePose {
   /** The athlete marker. */
@@ -261,4 +288,162 @@ export function chasePose(
       ? along
       : offsetMeters(here, bearing, LOOK_AT_M)
   return { marker: here, lookAt, bearing, heading }
+}
+
+/**
+ * Splits the polyline at the playback cursor. Both sides include the current
+ * vertex so the remaining ghost and the glow ribbon meet at the athlete.
+ *
+ * @param points - Ordered route.
+ * @param fraction - Position from 0 to 1.
+ */
+export function splitRouteAtFraction(
+  points: readonly GeoPoint[],
+  fraction: number,
+): { traveled: GeoPoint[]; remaining: GeoPoint[] } {
+  if (points.length === 0) {
+    return { traveled: [], remaining: [] }
+  }
+  const index = indexAtFraction(points.length, fraction)
+  return {
+    traveled: points.slice(0, index + 1),
+    remaining: points.slice(index),
+  }
+}
+
+/**
+ * Clamps `value` to 0–1.
+ *
+ * @param value - Unbounded mix amount.
+ */
+export function clamp01(value: number): number {
+  return Math.min(1, Math.max(0, value))
+}
+
+/**
+ * Linear interpolation.
+ *
+ * @param from - Start.
+ * @param to - End.
+ * @param amount - 0 keeps `from`, 1 reaches `to`.
+ */
+export function lerp(from: number, to: number, amount: number): number {
+  return from + (to - from) * amount
+}
+
+/**
+ * Zoom and pitch for a ground speed. Slow is close and steep; fast pulls back
+ * and flattens so the next bend stays in view.
+ *
+ * @param speedKmh - Smoothed speed in kilometres per hour.
+ */
+export function framingFromSpeedKmh(speedKmh: number): { zoom: number; pitch: number } {
+  const t = clamp01((speedKmh - MIN_SPEED_KMH) / (MAX_SPEED_KMH - MIN_SPEED_KMH))
+  return {
+    zoom: lerp(ZOOM_SLOW, ZOOM_FAST, t),
+    pitch: lerp(PITCH_SLOW, PITCH_FAST, t),
+  }
+}
+
+/**
+ * Steps zoom and pitch toward a target. Seek jumps; playback eases.
+ *
+ * @param current - Last frame.
+ * @param target - Speed-derived framing.
+ * @param snap - Skip easing.
+ * @param amount - Blend per frame. Defaults to {@link CAMERA_LERP}.
+ */
+export function easeFraming(
+  current: { zoom: number; pitch: number },
+  target: { zoom: number; pitch: number },
+  snap: boolean,
+  amount = CAMERA_LERP,
+): { zoom: number; pitch: number } {
+  if (snap) {
+    return target
+  }
+  return {
+    zoom: lerp(current.zoom, target.zoom, amount),
+    pitch: lerp(current.pitch, target.pitch, amount),
+  }
+}
+
+/**
+ * Sample clock when every time is finite and the series moves forward.
+ *
+ * @param timesMs - Candidate times, or `null`.
+ * @param length - Expected sample count.
+ */
+function usableSpeedTimes(
+  timesMs: readonly number[] | null,
+  length: number,
+): readonly number[] | null {
+  if (!timesMs || timesMs.length !== length || length < 2) {
+    return null
+  }
+  const first = timesMs[0]
+  const last = timesMs[length - 1]
+  if (
+    first == null ||
+    last == null ||
+    !Number.isFinite(first) ||
+    !Number.isFinite(last) ||
+    last <= first
+  ) {
+    return null
+  }
+  for (const time of timesMs) {
+    if (!Number.isFinite(time)) {
+      return null
+    }
+  }
+  return timesMs
+}
+
+/**
+ * Ground speed at a route fraction, in metres per second. Uses a few samples
+ * around the cursor. When timestamps are missing, each sample is one second.
+ *
+ * @param points - Ordered route.
+ * @param fraction - Position from 0 to 1.
+ * @param timesMs - Epoch milliseconds per point, or `null`.
+ */
+export function speedMpsAtFraction(
+  points: readonly GeoPoint[],
+  fraction: number,
+  timesMs: readonly number[] | null,
+): number {
+  if (points.length < 2) {
+    return 0
+  }
+  const index = indexAtFraction(points.length, fraction)
+  const from = Math.max(0, index - SPEED_HALF_WINDOW)
+  const to = Math.min(points.length - 1, index + SPEED_HALF_WINDOW)
+  if (to <= from) {
+    return 0
+  }
+  let distance = 0
+  for (let step = from; step < to; step += 1) {
+    const a = points[step]
+    const b = points[step + 1]
+    if (a && b) {
+      distance += metersBetween(a, b)
+    }
+  }
+  const times = usableSpeedTimes(timesMs, points.length)
+  const firstTime = times?.[from]
+  const lastTime = times?.[to]
+  const durationS =
+    firstTime != null && lastTime != null && lastTime > firstTime
+      ? (lastTime - firstTime) / 1000
+      : (to - from) * FALLBACK_SAMPLE_S
+  if (distance <= 0 || durationS <= 0) {
+    return 0
+  }
+  return distance / durationS
+}
+
+/** Metres per second to kilometres per hour. */
+export function mpsToKmh(mps: number): number {
+  return mps * 3.6
 }

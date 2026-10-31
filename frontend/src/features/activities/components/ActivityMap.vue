@@ -148,7 +148,7 @@ function moveCursor(fraction: number, followCamera: boolean, snap = false): void
     return
   }
   if (replayMap) {
-    replayMap.follow(props.points, fraction, snap)
+    replayMap.follow(props.points, fraction, snap, props.timesMs)
     return
   }
   instance?.panTo(point)
@@ -288,7 +288,7 @@ function restoreOverview(): void {
 /** Opens the pitched camera over the current point. */
 async function mountTilted(): Promise<void> {
   if (replayMap) {
-    replayMap.follow(props.points, scrubModel.value, true)
+    replayMap.follow(props.points, scrubModel.value, true, props.timesMs)
     return
   }
   if (!open.value) {
@@ -312,6 +312,7 @@ async function mountTilted(): Promise<void> {
       tileUrl: config.value.map.tileUrl,
       attribution: config.value.map.attribution,
       fraction: scrubModel.value,
+      timesMs: props.timesMs,
     })
     if (generation !== replayMount || !open.value) {
       mapHandle.destroy()
@@ -319,7 +320,7 @@ async function mountTilted(): Promise<void> {
       return
     }
     replayMap = mapHandle
-    mapHandle.follow(props.points, scrubModel.value, true)
+    mapHandle.follow(props.points, scrubModel.value, true, props.timesMs)
   } catch (error) {
     replayMap = null
     tilted.value = false
@@ -497,6 +498,7 @@ onBeforeUnmount(() => {
 
 .replay-host {
   animation: replay-fade-in 0.45s ease;
+  background-color: #d8e2eb;
 }
 
 @keyframes replay-fade-in {
@@ -516,6 +518,7 @@ onBeforeUnmount(() => {
   width: 100%;
   height: 100%;
   border-radius: inherit;
+  background-color: #d8e2eb;
 }
 
 .replay-host :deep(.maplibregl-ctrl-bottom-right) {
