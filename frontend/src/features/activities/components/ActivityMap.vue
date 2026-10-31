@@ -500,8 +500,21 @@ onBeforeUnmount(() => {
   height: 100%;
 }
 
-.replay-host :deep(.maplibregl-ctrl-bottom-left) {
-  bottom: 4.75rem;
+.replay-host :deep(.maplibregl-ctrl-bottom-right) {
+  right: 3.35rem;
+  bottom: 0.7rem;
+}
+
+.replay-host :deep(.maplibregl-ctrl-attrib) {
+  margin: 0;
+  min-height: 24px;
+  background: rgb(255 255 255 / 0.78);
+}
+
+.replay-host :deep(.maplibregl-ctrl-attrib-button) {
+  width: 24px;
+  height: 24px;
+  cursor: pointer;
 }
 
 .replay-range {

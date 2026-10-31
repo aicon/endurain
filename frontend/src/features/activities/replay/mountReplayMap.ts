@@ -88,6 +88,16 @@ function easeCamera(
   })
 }
 
+/** Collapses the credit to the info button so it does not cover the map. */
+function collapseAttribution(map: Map): void {
+  const attrib = map.getContainer().querySelector('.maplibregl-ctrl-attrib')
+  if (attrib instanceof HTMLElement) {
+    attrib.classList.add('maplibregl-compact')
+    attrib.classList.remove('maplibregl-compact-show')
+    attrib.removeAttribute('open')
+  }
+}
+
 /** GeoJSON line for the route. MapLibre expects `[lng, lat]`. */
 function routeLine(points: readonly GeoPoint[]) {
   return {
@@ -169,7 +179,7 @@ export async function mountReplayMap(
       terrain: { source: 'terrain', exaggeration: 1.25 },
     },
   })
-  map.addControl(new AttributionControl({ compact: true }), 'bottom-left')
+  map.addControl(new AttributionControl({ compact: true }), 'bottom-right')
 
   const marker = new Marker({
     element: headingArrow(),
@@ -207,7 +217,7 @@ export async function mountReplayMap(
       pitch: REPLAY_PITCH,
       zoom: REPLAY_ZOOM,
     })
-    marker.setLngLat([pose.marker.lng, pose.marker.lat]).setRotation(bearing)
+    marker.setLngLat([pose.marker.lng, pose.marker.lat]).setRotation(pose.heading)
   }
 
   map.on('error', (event) => {
@@ -222,11 +232,12 @@ export async function mountReplayMap(
     map.once('load', () => resolve())
   })
   map.resize()
+  collapseAttribution(map)
   const intro = chasePose(latestPoints, latestFraction, 0, true)
   if (intro) {
     bearing = intro.bearing
     lastLookAt = intro.lookAt
-    marker.setLngLat([intro.marker.lng, intro.marker.lat]).setRotation(bearing)
+    marker.setLngLat([intro.marker.lng, intro.marker.lat]).setRotation(intro.heading)
     map.jumpTo({
       center: [intro.lookAt.lng, intro.lookAt.lat],
       bearing,

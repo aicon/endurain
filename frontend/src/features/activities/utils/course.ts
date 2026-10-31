@@ -8,6 +8,9 @@ const EARTH_M = 6_371_000
 /** How far along the route heading is read, in metres. */
 export const LOOK_AHEAD_M = 60
 
+/** How far along the route the athlete arrow reads heading, in metres. */
+export const MARKER_AHEAD_M = 16
+
 /** Ground point the map looks at, ahead of the athlete, in metres. */
 export const LOOK_AT_M = 22
 
@@ -32,6 +35,8 @@ export interface ChasePose {
   lookAt: GeoPoint
   /** Compass heading the camera looks, 0–360. */
   bearing: number
+  /** Compass heading of the path under the athlete, 0–360. */
+  heading: number
 }
 
 /**
@@ -243,10 +248,17 @@ export function chasePose(
     target = bearingDegrees(behind, here)
   }
   const bearing = snap ? target : mixBearing(previousBearing, target, BEARING_SMOOTH)
+  const near = walkRoute(points, index, MARKER_AHEAD_M) ?? here
+  let heading = bearing
+  if (metersBetween(here, near) >= MIN_HEADING_M * 0.5) {
+    heading = bearingDegrees(here, near)
+  } else if (metersBetween(behind, here) >= MIN_HEADING_M * 0.5) {
+    heading = bearingDegrees(behind, here)
+  }
   const along = walkRoute(points, index, LOOK_AT_M)
   const lookAt =
     along && metersBetween(here, along) >= LOOK_AT_M * 0.4
       ? along
       : offsetMeters(here, bearing, LOOK_AT_M)
-  return { marker: here, lookAt, bearing }
+  return { marker: here, lookAt, bearing, heading }
 }

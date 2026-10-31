@@ -61,6 +61,7 @@ describe('chasePose', () => {
       return
     }
     expect(pose.bearing).toBeCloseTo(90, 0)
+    expect(pose.heading).toBeCloseTo(90, 0)
     expect(pose.lookAt.lng).toBeGreaterThan(pose.marker.lng)
     expect(metersBetween(pose.lookAt, pose.marker)).toBeGreaterThan(LOOK_AT_M * 0.4)
   })
@@ -89,5 +90,24 @@ describe('chasePose', () => {
     ]
     const pose = chasePose(stuck, 0.5, 33, true)
     expect(pose?.bearing).toBe(33)
+    expect(pose?.heading).toBe(33)
+  })
+
+  it('turns the athlete arrow with the path, not the far look-ahead', () => {
+    const step = 0.00025
+    const eastThenNorth = [
+      ...Array.from({ length: 8 }, (_, index) => ({ lat: 0, lng: index * step })),
+      ...Array.from({ length: 8 }, (_, index) => ({
+        lat: (index + 1) * step,
+        lng: 7 * step,
+      })),
+    ]
+    const pose = chasePose(eastThenNorth, 6 / 15, 90, true)
+    expect(pose).not.toBeNull()
+    if (!pose) {
+      return
+    }
+    expect(pose.heading).toBeCloseTo(90, 0)
+    expect(Math.abs(shortestBearingDelta(pose.heading, pose.bearing))).toBeGreaterThan(20)
   })
 })
