@@ -375,5 +375,5 @@ export async function fetchReplayPlaces(
       loaded = []
     }
   }
-  return snapPlacesToRoute(loaded, points)
+  return loaded
 }

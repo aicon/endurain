@@ -16,12 +16,12 @@ import {
   pickOverviewPlaces,
   pickVisiblePlace,
   placeCaption,
+  snapPlacesToRoute,
   type ReplayPlace,
 } from '@/features/activities/replay/replayPlaces'
 import {
   PITCH_SLOW,
   ZOOM_SLOW,
-  bearingDegrees,
   chasePose,
   cumulativeDistances,
   distanceAlongFraction,
@@ -62,14 +62,14 @@ const SKY_ZENITH = '#6ea8d6'
 /** Starting zoom before the overview camera fits the route. */
 const INTRO_ZOOM = 14
 
-/** Bird's-eye overview, in milliseconds. */
-const OVERVIEW_MS = 2500
+/** Bird's-eye overview after places have loaded, in milliseconds. */
+const OVERVIEW_MS = 2800
 
 /** Fly-in from the overview to the start line, in milliseconds. */
 const FLY_IN_MS = 2000
 
-/** Pitch of the overview camera, in degrees. */
-const OVERVIEW_PITCH = 40
+/** Pitch of the north-up overview camera, in degrees. */
+const OVERVIEW_PITCH = 35
 
 /** Playback camera phase. */
 export type ReplayState = 'INTRO_OVERVIEW' | 'FLYING_IN' | 'PLAYING'
@@ -197,16 +197,6 @@ function fillBillboard(
   parts.icon.textContent = caption.icon
   parts.title.textContent = caption.title
   parts.subtitle.textContent = caption.subtitle
-}
-
-/** Compass heading from the start of the route toward the finish. */
-function routeOverviewBearing(points: readonly GeoPoint[]): number {
-  const first = points[0]
-  const last = points[points.length - 1]
-  if (!first || !last || (first.lat === last.lat && first.lng === last.lng)) {
-    return 0
-  }
-  return bearingDegrees(first, last)
 }
 
 /** MapLibre box around the GPS track. */
@@ -479,6 +469,7 @@ export async function mountReplayMap(
         .setLngLat([place.lng, place.lat])
         .addTo(map)
       board.getElement().classList.add('is-visible')
+      parts.wrapper.classList.add('is-visible')
       overviewMarkers.push(board)
     }
   }
@@ -529,16 +520,7 @@ export async function mountReplayMap(
   let lastLineAt = 0
   let lastLineVertex = -1
 
-  void fetchReplayPlaces(options.points, placesAbort.signal).then((loaded) => {
-    places = loaded
-    showOverviewMarkers(loaded)
-    if (replayState === 'PLAYING') {
-      const pose = chasePose(latestPoints, latestFraction, bearing, true, lengths)
-      if (pose) {
-        paintPlace(pose.marker)
-      }
-    }
-  })
+  const placesReady = fetchReplayPlaces(options.points, placesAbort.signal)
 
   /** Writes lng/lat pairs without cloning the GeoJSON wrapper twice. */
   const toCoords = (points: readonly GeoPoint[]): [number, number][] =>
@@ -643,33 +625,34 @@ export async function mountReplayMap(
   })
   collapseAttribution(map)
   replayState = 'INTRO_OVERVIEW'
-  const overviewBearing = routeOverviewBearing(latestPoints)
   const bounds = routeLngLatBounds(latestPoints)
   if (bounds) {
     map.fitBounds(bounds, {
       pitch: OVERVIEW_PITCH,
-      bearing: overviewBearing,
-      padding: { top: 80, bottom: 80, left: 60, right: 60 },
+      bearing: 0,
+      padding: { top: 90, bottom: 90, left: 70, right: 70 },
       duration: 0,
     })
   }
-  const startPose = chasePose(latestPoints, latestFraction, overviewBearing, true, lengths)
+  const startPose = chasePose(latestPoints, latestFraction, 0, true, lengths)
   if (startPose) {
     bearing = startPose.bearing
     marker.setLngLat([startPose.marker.lng, startPose.marker.lat]).setRotation(startPose.heading)
     paintPuck(startPose.marker)
   }
-  if (places.length > 0) {
-    showOverviewMarkers(places)
+  const loadedPlaces = await placesReady
+  if (!placesAbort.signal.aborted) {
+    places = snapPlacesToRoute(loadedPlaces, latestPoints)
+    showOverviewMarkers(loadedPlaces)
+    await waitMs(OVERVIEW_MS, placesAbort.signal)
   }
-  await waitMs(OVERVIEW_MS, placesAbort.signal)
   if (placesAbort.signal.aborted) {
     replayState = 'PLAYING'
   } else {
     replayState = 'FLYING_IN'
     clearOverviewMarkers(true)
     const flyTarget = startPose?.marker ?? start
-    const flyBearing = startPose?.bearing ?? overviewBearing
+    const flyBearing = startPose?.bearing ?? 0
     await new Promise<void>((resolve) => {
       let settled = false
       const finish = (): void => {
@@ -716,7 +699,7 @@ export async function mountReplayMap(
       latestPoints = points
       lengths = cumulativeDistances(points)
       void fetchReplayPlaces(points, placesAbort.signal).then((loaded) => {
-        places = loaded
+        places = snapPlacesToRoute(loaded, latestPoints)
         showOverviewMarkers(loaded)
         const next = chasePose(latestPoints, latestFraction, bearing, true, lengths)
         if (next) {
