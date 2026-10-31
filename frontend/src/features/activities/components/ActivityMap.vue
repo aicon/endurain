@@ -68,7 +68,7 @@ const speed = ref<ReplaySpeed>(1)
 let replayMap: ReplayMap | null = null
 let replayMount = 0
 
-/** Labeled rate times ten, so 1x plays the recording at ten times its pace. */
+/** Labeled rate times fifteen, so 1x plays the recording at fifteen times its pace. */
 function clockSpeed(): number {
   return speed.value * REPLAY_SPEED_SCALE
 }
@@ -311,6 +311,7 @@ async function mountTilted(): Promise<void> {
       points: props.points,
       tileUrl: config.value.map.tileUrl,
       attribution: config.value.map.attribution,
+      fraction: scrubModel.value,
     })
     if (generation !== replayMount || !open.value) {
       mapHandle.destroy()
@@ -477,6 +478,19 @@ onBeforeUnmount(() => {
 </template>
 
 <style scoped>
+.replay-host {
+  animation: replay-fade-in 0.45s ease;
+}
+
+@keyframes replay-fade-in {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
 .replay-host :deep(.maplibregl-map),
 .replay-host :deep(.maplibregl-canvas-container),
 .replay-host :deep(.maplibregl-canvas) {

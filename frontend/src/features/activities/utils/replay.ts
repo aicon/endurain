@@ -5,9 +5,9 @@ export const REPLAY_SPEEDS = [0.5, 1, 2, 4, 8] as const
 
 /**
  * The labeled rate is multiplied by this before it drives the clock, so the
- * button still reads 1x while the route plays at ten times the recording.
+ * button still reads 1x while the route plays at fifteen times the recording.
  */
-export const REPLAY_SPEED_SCALE = 10
+export const REPLAY_SPEED_SCALE = 15
 
 /** One playback rate from {@link REPLAY_SPEEDS}. */
 export type ReplaySpeed = (typeof REPLAY_SPEEDS)[number]
