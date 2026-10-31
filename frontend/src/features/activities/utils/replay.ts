@@ -12,6 +12,27 @@ export const REPLAY_SPEED_SCALE = 15
 /** One playback rate from {@link REPLAY_SPEEDS}. */
 export type ReplaySpeed = (typeof REPLAY_SPEEDS)[number]
 
+/** Longest frame duration counted toward the playback clock, in seconds. */
+export const MAX_FRAME_S = 0.05
+
+/** Weight of the new sample in the frame-delta smoother. */
+export const DELTA_SMOOTH = 0.2
+
+/**
+ * Blends a RAF interval so a 14–19 ms jitter does not pulse the virtual
+ * metres per second. Caps a hitch at {@link MAX_FRAME_S}.
+ *
+ * @param previous - Last smoothed interval, in seconds.
+ * @param rawSeconds - `now - lastFrame` in seconds.
+ */
+export function smoothFrameDelta(previous: number, rawSeconds: number): number {
+  const raw = Math.min(MAX_FRAME_S, Math.max(0, rawSeconds))
+  if (!(previous > 0)) {
+    return raw > 0 ? raw : 1 / 60
+  }
+  return previous * (1 - DELTA_SMOOTH) + raw * DELTA_SMOOTH
+}
+
 /**
  * Wall-clock time given to each sample when the track has no timestamps.
  * One second per sample matches a typical one-hertz GPS recording.

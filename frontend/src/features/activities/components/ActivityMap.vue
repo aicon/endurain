@@ -12,6 +12,7 @@ import {
   REPLAY_SPEED_SCALE,
   REPLAY_SPEEDS,
   replayStep,
+  smoothFrameDelta,
   type ReplaySpeed,
 } from '@/features/activities/utils/replay'
 import { pointAtFraction } from '@/features/activities/utils/scrub'
@@ -78,8 +79,17 @@ const scrubModel = ref(0)
 const played = computed(() => `${scrubModel.value * 100}%`)
 let instance: MapInstance | null = null
 let frame = 0
-let startedAt = 0
 let origin = 0
+let lastTickAt = 0
+let smoothedDeltaS = 1 / 60
+let smoothedElapsedMs = 0
+
+/** Restarts the smoothed playback clock at `now`. */
+function resetPlaybackClock(now: number): void {
+  lastTickAt = now
+  smoothedDeltaS = 1 / 60
+  smoothedElapsedMs = 0
+}
 
 /** Resolves the start/finish emphasis points from the track ends. */
 function endpoints(points: GeoPoint[]): { start?: GeoPoint; finish?: GeoPoint } {
@@ -173,7 +183,7 @@ function seek(fraction: number): void {
   scrubModel.value = next
   if (playing.value) {
     origin = next
-    startedAt = performance.now()
+    resetPlaybackClock(performance.now())
     if (next >= 1) {
       pause()
     }
@@ -197,8 +207,12 @@ function tick(now: number): void {
   if (!playing.value) {
     return
   }
+  const rawDelta = lastTickAt > 0 ? (now - lastTickAt) / 1000 : 1 / 60
+  lastTickAt = now
+  smoothedDeltaS = smoothFrameDelta(smoothedDeltaS, rawDelta)
+  smoothedElapsedMs += smoothedDeltaS * 1000
   const step = replayStep({
-    elapsedMs: now - startedAt,
+    elapsedMs: smoothedElapsedMs,
     speed: clockSpeed(),
     length: props.points.length,
     timesMs: props.timesMs,
@@ -232,7 +246,7 @@ async function play(): Promise<void> {
     return
   }
   moveCursor(scrubModel.value, true, true)
-  startedAt = performance.now()
+  resetPlaybackClock(performance.now())
   cancelClock()
   frame = requestAnimationFrame(tick)
 }
@@ -245,14 +259,14 @@ async function play(): Promise<void> {
 function setSpeed(next: ReplaySpeed): void {
   if (playing.value && next !== speed.value) {
     const step = replayStep({
-      elapsedMs: performance.now() - startedAt,
+      elapsedMs: smoothedElapsedMs,
       speed: clockSpeed(),
       length: props.points.length,
       timesMs: props.timesMs,
       startFraction: origin,
     })
     origin = step.fraction
-    startedAt = performance.now()
+    resetPlaybackClock(performance.now())
   }
   speed.value = next
 }

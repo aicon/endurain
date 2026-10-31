@@ -10,7 +10,7 @@ import {
   distanceAlongFraction,
   easeFraming,
   framingFromSpeedKmh,
-  metersBetween,
+  indexAtDistance,
   mpsToKmh,
   speedMpsAtFraction,
   splitRouteAtDistance,
@@ -48,8 +48,8 @@ const ROUTE_CORE = '#ffffff'
 /** How strongly the DEM lifts the ground. */
 const TERRAIN_EXAGGERATION = 1.3
 
-/** Skip a line rewrite when the puck has not moved this far. */
-const LINE_MOVE_M = 0.2
+/** How often the glow polyline is pushed to the MapLibre worker, in ms. */
+const LINE_UPDATE_MS = 35
 
 /** A tilted map that follows one point on the route. */
 export interface ReplayMap {
@@ -332,16 +332,15 @@ export async function mountReplayMap(
   const traveledFeature = routeLine(opening.traveled)
   const remainFeature = routeLine(opening.remaining)
   const puckFeature = routePuck(start)
-  let lastPainted: GeoPoint | null = null
+  let lastLineAt = 0
+  let lastLineVertex = -1
 
   /** Writes lng/lat pairs without cloning the GeoJSON wrapper twice. */
   const toCoords = (points: readonly GeoPoint[]): [number, number][] =>
     points.map((point) => [point.lng, point.lat])
 
-  /** Paints traveled glow, remaining ghost, and the lead puck on `puck`. */
-  const paintRoute = (puck: GeoPoint, snap: boolean): void => {
-    const moved = lastPainted == null || metersBetween(lastPainted, puck) >= LINE_MOVE_M
-    lastPainted = puck
+  /** Moves the lead puck every frame. A single point is cheap for the worker. */
+  const paintPuck = (puck: GeoPoint): void => {
     puckFeature.geometry.coordinates = [puck.lng, puck.lat]
     const puckSource = map.getSource('puck')
     if (puckSource instanceof GeoJSONSource) {
@@ -350,33 +349,22 @@ export async function mountReplayMap(
     const pulse = 0.5 + 0.5 * Math.sin(performance.now() / 280)
     map.setPaintProperty('replay-puck-halo', 'circle-radius', 8 + pulse * 4)
     map.setPaintProperty('replay-puck-halo', 'circle-opacity', 0.28 + pulse * 0.22)
-    if (!snap && !moved && traveledFeature.geometry.coordinates.length > 0) {
-      const head = traveledFeature.geometry.coordinates
-      const last = head[head.length - 1]
-      if (last) {
-        last[0] = puck.lng
-        last[1] = puck.lat
-      }
-      const remainHead = remainFeature.geometry.coordinates[0]
-      if (remainHead) {
-        remainHead[0] = puck.lng
-        remainHead[1] = puck.lat
-      }
-      const traveled = map.getSource('route-traveled')
-      if (traveled instanceof GeoJSONSource) {
-        traveled.setData(traveledFeature)
-      }
-      const remain = map.getSource('route-remain')
-      if (remain instanceof GeoJSONSource) {
-        remain.setData(remainFeature)
-      }
+  }
+
+  /**
+   * Pushes the glow polyline on seek, when a GPS vertex is crossed, or on a
+   * 35 ms cadence so the worker is not tessellating 60 times a second.
+   */
+  const paintLine = (snap: boolean): void => {
+    const distance = distanceAlongFraction(lengths, latestFraction)
+    const vertex = indexAtDistance(lengths, distance)
+    const now = performance.now()
+    if (!snap && vertex === lastLineVertex && now - lastLineAt < LINE_UPDATE_MS) {
       return
     }
-    const split = splitRouteAtDistance(
-      latestPoints,
-      lengths,
-      distanceAlongFraction(lengths, latestFraction),
-    )
+    lastLineAt = now
+    lastLineVertex = vertex
+    const split = splitRouteAtDistance(latestPoints, lengths, distance)
     traveledFeature.geometry.coordinates = toCoords(split.traveled)
     remainFeature.geometry.coordinates = toCoords(split.remaining)
     const traveled = map.getSource('route-traveled')
@@ -417,7 +405,8 @@ export async function mountReplayMap(
       zoom: currentZoom,
     })
     marker.setLngLat([pose.marker.lng, pose.marker.lat]).setRotation(pose.heading)
-    paintRoute(pose.marker, snap)
+    paintPuck(pose.marker)
+    paintLine(snap)
   }
 
   map.on('error', (event) => {
@@ -447,7 +436,8 @@ export async function mountReplayMap(
     bearing = intro.bearing
     lastLookAt = intro.lookAt
     marker.setLngLat([intro.marker.lng, intro.marker.lat]).setRotation(intro.heading)
-    paintRoute(intro.marker, true)
+    paintPuck(intro.marker)
+    paintLine(true)
     map.jumpTo({
       center: [intro.lookAt.lng, intro.lookAt.lat],
       bearing,
@@ -487,7 +477,9 @@ export async function mountReplayMap(
       latestPoints = points
       lengths = cumulativeDistances(points)
       const pose = chasePose(latestPoints, latestFraction, bearing, true, lengths)
-      paintRoute(pose?.marker ?? points[0] ?? start, true)
+      const puck = pose?.marker ?? points[0] ?? start
+      paintPuck(puck)
+      paintLine(true)
     },
     destroy() {
       map.stop()

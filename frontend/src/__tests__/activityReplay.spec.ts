@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 
-import { replayStep } from '@/features/activities/utils/replay'
+import { replayStep, smoothFrameDelta } from '@/features/activities/utils/replay'
 
 const times = [0, 1_000, 3_000]
 
@@ -54,6 +54,14 @@ describe('replayStep', () => {
       fraction: 1,
       done: true,
     })
+  })
+
+  it('blends a jittery RAF interval', () => {
+    const previous = 1 / 60
+    const next = smoothFrameDelta(previous, 0.019)
+    expect(next).toBeGreaterThan(previous)
+    expect(next).toBeLessThan(0.019)
+    expect(smoothFrameDelta(previous, 1)).toBeCloseTo(previous * 0.8 + 0.05 * 0.2, 5)
   })
 
   it('uses even spacing when a timestamp is missing', () => {

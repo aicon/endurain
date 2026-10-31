@@ -14,6 +14,8 @@ import {
   distanceAlongFraction,
   easeFraming,
   framingFromSpeedKmh,
+  lookAheadBearing,
+  meanBearing,
   metersBetween,
   mixBearing,
   mpsToKmh,
@@ -35,6 +37,32 @@ describe('mixBearing', () => {
   it('takes the short turn across north', () => {
     expect(shortestBearingDelta(350, 10)).toBeCloseTo(20, 5)
     expect(mixBearing(350, 10, 0.5)).toBeCloseTo(0, 5)
+  })
+})
+
+describe('meanBearing', () => {
+  it('averages across north', () => {
+    expect(meanBearing([350, 10], 0)).toBeCloseTo(0, 5)
+  })
+
+  it('returns the fallback when empty', () => {
+    expect(meanBearing([], 33)).toBe(33)
+  })
+})
+
+describe('lookAheadBearing', () => {
+  it('stays east on a straight line', () => {
+    const east = Array.from({ length: 20 }, (_, index) => ({
+      lat: 0,
+      lng: index * 0.001,
+    }))
+    const lengths = cumulativeDistances(east)
+    const here = east[4]
+    expect(here).toBeDefined()
+    if (!here) {
+      return
+    }
+    expect(lookAheadBearing(east, lengths, here, lengths[4] ?? 0, 0)).toBeCloseTo(90, 0)
   })
 })
 

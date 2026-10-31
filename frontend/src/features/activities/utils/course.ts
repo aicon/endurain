@@ -8,6 +8,9 @@ const EARTH_M = 6_371_000
 /** How far along the route heading is read, in metres. */
 export const LOOK_AHEAD_M = 60
 
+/** Path samples mixed into the camera target bearing, in metres. */
+export const LOOK_AHEAD_OFFSETS_M = [40, 60, 80] as const
+
 /** How far along the route the athlete arrow reads heading, in metres. */
 export const MARKER_AHEAD_M = 16
 
@@ -102,6 +105,53 @@ export function shortestBearingDelta(from: number, to: number): number {
 export function mixBearing(from: number, to: number, amount: number): number {
   const t = Math.min(1, Math.max(0, amount))
   return (from + shortestBearingDelta(from, to) * t + 360) % 360
+}
+
+/**
+ * Circular mean of compass headings. Empty input returns `fallback`.
+ *
+ * @param bearings - Headings in degrees.
+ * @param fallback - Used when nothing can be averaged.
+ */
+export function meanBearing(bearings: readonly number[], fallback: number): number {
+  if (bearings.length === 0) {
+    return fallback
+  }
+  let x = 0
+  let y = 0
+  for (const heading of bearings) {
+    const radians = (heading * Math.PI) / 180
+    x += Math.cos(radians)
+    y += Math.sin(radians)
+  }
+  return ((Math.atan2(y, x) * 180) / Math.PI + 360) % 360
+}
+
+/**
+ * Camera target heading from several look-ahead distances, so one GPS kink
+ * does not yank the horizon.
+ *
+ * @param points - Ordered route.
+ * @param cumulative - Path lengths.
+ * @param here - Interpolated athlete position.
+ * @param distance - Path metres at `here`.
+ * @param fallback - Used when no sample is far enough.
+ */
+export function lookAheadBearing(
+  points: readonly GeoPoint[],
+  cumulative: readonly number[],
+  here: GeoPoint,
+  distance: number,
+  fallback: number,
+): number {
+  const samples: number[] = []
+  for (const offset of LOOK_AHEAD_OFFSETS_M) {
+    const ahead = pointAtDistance(points, cumulative, distance + offset)
+    if (ahead && metersBetween(here, ahead) >= MIN_HEADING_M) {
+      samples.push(bearingDegrees(here, ahead))
+    }
+  }
+  return meanBearing(samples, fallback)
 }
 
 /**
@@ -369,12 +419,9 @@ export function chasePose(
   if (!here) {
     return null
   }
-  const ahead = pointAtDistance(points, lengths, distance + LOOK_AHEAD_M) ?? here
   const behind = pointAtDistance(points, lengths, distance - CAMERA_BEHIND_M) ?? here
-  let target = previousBearing
-  if (metersBetween(here, ahead) >= MIN_HEADING_M) {
-    target = bearingDegrees(here, ahead)
-  } else if (metersBetween(behind, here) >= MIN_HEADING_M) {
+  let target = lookAheadBearing(points, lengths, here, distance, previousBearing)
+  if (target === previousBearing && metersBetween(behind, here) >= MIN_HEADING_M) {
     target = bearingDegrees(behind, here)
   }
   const bearing = snap ? target : mixBearing(previousBearing, target, BEARING_SMOOTH)
