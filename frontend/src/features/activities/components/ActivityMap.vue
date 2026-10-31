@@ -388,7 +388,7 @@ onBeforeUnmount(() => {
        `isolate` creates a stacking context so Leaflet's internal panes and
        controls (z-index up to 1000) stay contained and never paint over the
        sticky navbar (z-40) or bottom nav while scrolling. -->
-  <div class="relative isolate size-full overflow-hidden bg-muted">
+  <div class="relative isolate size-full overflow-hidden">
     <div
       ref="container"
       class="size-full"
@@ -401,7 +401,7 @@ onBeforeUnmount(() => {
          frame and leave the flat Leaflet map in view. -->
     <div
       v-if="tilted"
-      class="replay-host absolute inset-0 z-[1050] bg-muted"
+      class="replay-host absolute inset-0 z-[1050]"
       @pointerdown="onMapPointerDown"
     >
       <div ref="replayHost" class="size-full" />
@@ -478,6 +478,10 @@ onBeforeUnmount(() => {
 </template>
 
 <style scoped>
+:deep(.leaflet-container) {
+  background: transparent;
+}
+
 .replay-host {
   animation: replay-fade-in 0.45s ease;
 }

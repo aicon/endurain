@@ -67,7 +67,7 @@ const props = withDefaults(
     thumbnailUrl: null,
     thumbnailTo: undefined,
     thumbnailPending: false,
-    heightClass: 'h-72 lg:h-150',
+    heightClass: 'h-72 lg:h-120',
     isOwner: false,
     cursor: null,
     follow: false,
@@ -206,7 +206,7 @@ async function confirmDelete(): Promise<void> {
     :class="sticky ? 'max-lg:sticky max-lg:top-below-nav max-lg:z-20' : undefined"
   >
     <div
-      class="relative overflow-hidden rounded-card border border-border bg-muted"
+      class="map-frame relative overflow-hidden rounded-card border border-border"
       :class="sticky ? 'max-lg:shadow-md' : undefined"
     >
       <!-- Every slide stays mounted (translated, never `display:none`) so the
@@ -384,6 +384,16 @@ async function confirmDelete(): Promise<void> {
 </template>
 
 <style scoped>
+.map-frame {
+  /* Leaflet tiles use transforms, so overflow:hidden alone leaves the
+     rounded corners filled with the page background. */
+  clip-path: inset(0 round var(--radius-card));
+}
+
+.map-frame :deep(.leaflet-container) {
+  background: transparent;
+}
+
 .lightbox-enter-active,
 .lightbox-leave-active {
   transition: opacity 0.18s ease;

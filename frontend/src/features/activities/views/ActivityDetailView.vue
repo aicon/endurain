@@ -250,7 +250,7 @@ const notFound = computed(() => !isPending.value && !isError.value && activity.v
       </Card>
 
       <!-- Map zone: matches the gallery's height. -->
-      <Skeleton class="h-72 w-full rounded-card lg:h-150" />
+      <Skeleton class="h-72 w-full rounded-card lg:h-120" />
 
       <!-- Charts grid: two-column stream-chart placeholders. -->
       <div class="grid gap-3 lg:grid-cols-2" aria-busy="true">
