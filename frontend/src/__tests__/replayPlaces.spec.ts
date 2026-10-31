@@ -4,10 +4,12 @@ import {
   PLACE_HIDE_M,
   PLACE_SHOW_M,
   overpassQuery,
+  parseNominatimPlaces,
   parseOverpassPlaces,
   pickVisiblePlace,
   placeCaption,
   routeBbox,
+  snapPlacesToRoute,
   type ReplayPlace,
 } from '@/features/activities/replay/replayPlaces'
 
@@ -83,13 +85,47 @@ describe('parseOverpassPlaces', () => {
 })
 
 describe('pickVisiblePlace', () => {
-  it('shows under 400 m and holds until 600 m', () => {
+  it('shows under 400 m of the on-route pole', () => {
     const here = { lat: 47.9, lng: 20.37 }
-    expect(pickVisiblePlace(here, [town], null)?.id).toBe('town:1')
+    const onPath = { ...town, anchor: here }
+    expect(pickVisiblePlace(here, [onPath], null)?.id).toBe('town:1')
     const far = { lat: 47.9 + PLACE_SHOW_M / 111_320, lng: 20.37 }
-    expect(pickVisiblePlace(far, [town], town)?.id).toBe('town:1')
+    expect(pickVisiblePlace(far, [onPath], onPath)?.id).toBe('town:1')
     const gone = { lat: 47.9 + (PLACE_HIDE_M + 50) / 111_320, lng: 20.37 }
-    expect(pickVisiblePlace(gone, [town], town)).toBeNull()
+    expect(pickVisiblePlace(gone, [onPath], onPath)).toBeNull()
+  })
+})
+
+describe('snapPlacesToRoute', () => {
+  it('moves the pole onto the nearest track sample', () => {
+    const route = [
+      { lat: 47.9, lng: 20.37 },
+      { lat: 47.91, lng: 20.38 },
+    ]
+    const [snapped] = snapPlacesToRoute(
+      [{ ...town, lat: 47.9004, lng: 20.3704 }],
+      route,
+    )
+    expect(snapped?.anchor).toEqual(route[0])
+  })
+})
+
+describe('parseNominatimPlaces', () => {
+  it('keeps named settlements', () => {
+    expect(
+      parseNominatimPlaces([
+        { osm_id: 9, lat: '47.9', lon: '20.37', name: 'Eger', addresstype: 'town' },
+      ]),
+    ).toEqual([
+      {
+        id: 'town:nom:9',
+        name: 'Eger',
+        kind: 'town',
+        settlement: 'town',
+        lat: 47.9,
+        lng: 20.37,
+      },
+    ])
   })
 })
 

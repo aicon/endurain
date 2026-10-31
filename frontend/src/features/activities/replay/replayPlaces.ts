@@ -3,16 +3,22 @@ import type { GeoPoint } from '@/composables/useMapProvider'
 import { metersBetween } from '@/features/activities/utils/course'
 
 /** Show a place board when the athlete is closer than this, in metres. */
-export const PLACE_SHOW_M = 1500
+export const PLACE_SHOW_M = 400
 
 /** Hide the board once the athlete is farther than this, in metres. */
-export const PLACE_HIDE_M = 2200
+export const PLACE_HIDE_M = 600
+
+/** Drop a POI whose closest track point is farther than this. */
+const MAX_OFF_ROUTE_M = 2500
 
 /** Extra degrees around the track so a nearby peak still matches. */
 const BBOX_PAD_DEG = 0.02
 
 /** Public Overpass interpreter. */
 export const OVERPASS_URL = 'https://overpass-api.de/api/interpreter'
+
+/** Nominatim search; covered by the existing `*.openstreetmap.org` CSP. */
+export const NOMINATIM_SEARCH_URL = 'https://nominatim.openstreetmap.org/search'
 
 /** OSM settlement class for the board subtitle. */
 export type SettlementKind = 'city' | 'town' | 'village' | 'hamlet' | 'suburb'
@@ -26,6 +32,8 @@ export interface ReplayPlace {
   ele?: number
   lat: number
   lng: number
+  /** Closest point on the GPS track; the board stands here, in camera. */
+  anchor?: GeoPoint
 }
 
 /** South, west, north, east box, padded. */
@@ -70,7 +78,7 @@ export function routeBbox(points: readonly GeoPoint[]): RouteBbox | null {
  * @param box - Route bounds.
  */
 export function overpassQuery(box: RouteBbox): string {
-  return `[out:json][timeout:8];
+  return `[out:json][timeout:25];
 (
   node["place"~"city|town|village|hamlet|suburb"](${box.south},${box.west},${box.north},${box.east});
   node["natural"="peak"](${box.south},${box.west},${box.north},${box.east});
@@ -136,9 +144,92 @@ export function parseOverpassPlaces(payload: unknown): ReplayPlace[] {
   return places
 }
 
+type NominatimHit = {
+  lat?: string
+  lon?: string
+  name?: string
+  addresstype?: string
+  type?: string
+  class?: string
+  osm_id?: number
+}
+
+/**
+ * Reads settlements from a Nominatim jsonv2 search.
+ *
+ * @param payload - Search array.
+ */
+export function parseNominatimPlaces(payload: unknown): ReplayPlace[] {
+  if (!Array.isArray(payload)) {
+    return []
+  }
+  const places: ReplayPlace[] = []
+  for (const raw of payload) {
+    const hit = raw as NominatimHit
+    const name = hit.name?.trim()
+    const lat = hit.lat !== undefined ? Number.parseFloat(hit.lat) : Number.NaN
+    const lng = hit.lon !== undefined ? Number.parseFloat(hit.lon) : Number.NaN
+    if (!name || !Number.isFinite(lat) || !Number.isFinite(lng)) {
+      continue
+    }
+    const kind = hit.addresstype ?? hit.type
+    const isPeak = hit.class === 'natural' && kind === 'peak'
+    const isTown =
+      kind === 'city' ||
+      kind === 'town' ||
+      kind === 'village' ||
+      kind === 'hamlet' ||
+      kind === 'suburb'
+    if (!isTown && !isPeak) {
+      continue
+    }
+    places.push({
+      id: `${isPeak ? 'peak' : 'town'}:nom:${hit.osm_id ?? `${lat},${lng}`}`,
+      name,
+      kind: isPeak ? 'peak' : 'town',
+      ...(!isPeak && isTown ? { settlement: kind as SettlementKind } : {}),
+      lat,
+      lng,
+    })
+  }
+  return places
+}
+
+/**
+ * Puts each place on the nearest GPS sample so the pole stands in the shot.
+ *
+ * @param places - Overpass / Nominatim hits.
+ * @param points - Ordered route.
+ */
+export function snapPlacesToRoute(
+  places: readonly ReplayPlace[],
+  points: readonly GeoPoint[],
+): ReplayPlace[] {
+  if (points.length === 0) {
+    return []
+  }
+  const snapped: ReplayPlace[] = []
+  for (const place of places) {
+    let anchor = points[0]!
+    let nearestM = Infinity
+    for (const point of points) {
+      const distance = metersBetween(point, { lat: place.lat, lng: place.lng })
+      if (distance < nearestM) {
+        nearestM = distance
+        anchor = point
+      }
+    }
+    if (nearestM > MAX_OFF_ROUTE_M) {
+      continue
+    }
+    snapped.push({ ...place, anchor })
+  }
+  return snapped
+}
+
 /**
  * Keeps one board: enter under {@link PLACE_SHOW_M}, stay until
- * {@link PLACE_HIDE_M}.
+ * {@link PLACE_HIDE_M}. Distance is to the on-route pole, not the town hall.
  *
  * @param here - Athlete position.
  * @param places - Loaded POIs.
@@ -149,8 +240,8 @@ export function pickVisiblePlace(
   places: readonly ReplayPlace[],
   current: ReplayPlace | null,
 ): ReplayPlace | null {
-  const distTo = (place: ReplayPlace): number =>
-    metersBetween(here, { lat: place.lat, lng: place.lng })
+  const poleOf = (place: ReplayPlace): GeoPoint => place.anchor ?? { lat: place.lat, lng: place.lng }
+  const distTo = (place: ReplayPlace): number => metersBetween(here, poleOf(place))
   if (current) {
     const held = places.find((place) => place.id === current.id) ?? current
     if (distTo(held) <= PLACE_HIDE_M) {
@@ -207,19 +298,28 @@ export async function fetchReplayPlaces(
   if (!box) {
     return []
   }
-  const query = overpassQuery(box)
+  const overpassUrl = `${OVERPASS_URL}?data=${encodeURIComponent(overpassQuery(box))}`
+  const nominatimUrl =
+    `${NOMINATIM_SEARCH_URL}?format=jsonv2&bounded=1&limit=50` +
+    `&featureType=settlement&viewbox=${box.west},${box.north},${box.east},${box.south}`
+  let loaded: ReplayPlace[] = []
   try {
-    const response = await fetch(OVERPASS_URL, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/x-www-form-urlencoded;charset=UTF-8' },
-      body: `data=${encodeURIComponent(query)}`,
-      signal,
-    })
-    if (!response.ok) {
-      return []
+    const response = await fetch(overpassUrl, { signal })
+    if (response.ok) {
+      loaded = parseOverpassPlaces(await response.json())
     }
-    return parseOverpassPlaces(await response.json())
   } catch {
-    return []
+    loaded = []
   }
+  if (loaded.length === 0) {
+    try {
+      const response = await fetch(nominatimUrl, { signal })
+      if (response.ok) {
+        loaded = parseNominatimPlaces(await response.json())
+      }
+    } catch {
+      loaded = []
+    }
+  }
+  return snapPlacesToRoute(loaded, points)
 }

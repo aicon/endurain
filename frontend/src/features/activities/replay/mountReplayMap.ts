@@ -372,7 +372,9 @@ export async function mountReplayMap(
     pitchAlignment: 'viewport',
     opacityWhenCovered: 1,
     subpixelPositioning: true,
-  }).setLngLat([start.lng, start.lat])
+  })
+    .setLngLat([start.lng, start.lat])
+    .addTo(map)
 
   const placesAbort = new AbortController()
   let places: ReplayPlace[] = []
@@ -394,10 +396,8 @@ export async function mountReplayMap(
       signIcon.textContent = caption.icon
       signTitle.textContent = caption.title
       signSubtitle.textContent = caption.subtitle
-      townMarker.setLngLat([next.lng, next.lat])
-      if (!townMarkerEl.isConnected) {
-        townMarker.addTo(map)
-      }
+      const pole = next.anchor ?? { lat: next.lat, lng: next.lng }
+      townMarker.setLngLat([pole.lng, pole.lat])
       billboard.classList.remove('is-visible', 'is-leaving')
       requestAnimationFrame(() => {
         billboard.classList.add('is-visible')
