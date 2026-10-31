@@ -355,30 +355,38 @@ useRouteQueryReplacement(activitiesQueryState)
           </EmptyState>
         </template>
 
-        <div>
-          <!-- Aligned column headers (desktop); cell classes match ActivityListItem. -->
-          <div
-            class="sticky top-below-nav z-20 hidden border-b border-border bg-card px-4 py-2 sm:flex sm:items-center sm:gap-3"
-          >
-            <span class="min-w-0 w-[38%] max-w-sm ps-13 text-caption">{{
-              t('activities.list.columns.activity')
-            }}</span>
-            <div class="flex min-w-0 flex-1 items-baseline justify-end gap-6">
-              <span
+        <!-- A real table so metric columns size to the header text, and so
+             sticky `th` cells pin against the page (flex rows did not). -->
+        <table class="w-full border-separate border-spacing-0">
+          <thead class="hidden sm:table-header-group">
+            <tr>
+              <th
+                class="sticky top-below-nav z-20 w-full border-b border-border bg-card px-4 py-2 ps-17 text-left text-caption font-normal"
+              >
+                {{ t('activities.list.columns.activity') }}
+              </th>
+              <th
                 v-for="col in visibleColumns"
                 :key="col.key"
-                :class="['text-caption whitespace-nowrap', col.cellClass]"
+                :class="[
+                  'sticky top-below-nav z-20 border-b border-border bg-card px-3 py-2 text-caption font-normal',
+                  col.cellClass,
+                ]"
               >
                 {{ t(col.labelKey) }}
-              </span>
-            </div>
-          </div>
-          <ul class="divide-y divide-border">
-            <li v-for="activity in activities" :key="activity.id">
-              <ActivityListItem :activity="activity" :units="units" :columns="visibleColumns" />
-            </li>
-          </ul>
-        </div>
+              </th>
+            </tr>
+          </thead>
+          <tbody>
+            <ActivityListItem
+              v-for="activity in activities"
+              :key="activity.id"
+              :activity="activity"
+              :units="units"
+              :columns="visibleColumns"
+            />
+          </tbody>
+        </table>
       </ListPanel>
     </div>
   </section>

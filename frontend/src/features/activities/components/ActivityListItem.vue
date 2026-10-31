@@ -126,51 +126,51 @@ const mobileSummary = computed(() => {
 </script>
 
 <template>
-  <div
-    class="flex flex-col gap-1.5 px-4 py-3 transition-colors hover:bg-muted/50 sm:flex-row sm:items-center sm:gap-3"
-  >
+  <tr class="transition-colors hover:bg-muted/50">
     <!-- Identity: type icon, linked name, date · location, mobile metric summary. -->
-    <div class="flex min-w-0 w-full items-center gap-3 sm:w-[38%] sm:max-w-sm sm:shrink-0">
-      <span
-        class="flex size-10 shrink-0 items-center justify-center rounded-full bg-muted text-muted-foreground"
+    <td class="w-full border-b border-border px-4 py-3">
+      <div class="flex min-w-0 items-center gap-3">
+        <span
+          class="flex size-10 shrink-0 items-center justify-center rounded-full bg-muted text-muted-foreground"
+        >
+          <component :is="presentation.icon" class="size-6" aria-hidden="true" />
+        </span>
+        <div class="min-w-0 flex-1">
+          <RouterLink
+            :to="{ name: 'activity', params: { id: activity.id } }"
+            class="block truncate font-medium text-foreground hover:underline"
+          >
+            {{ activity.name }}
+          </RouterLink>
+          <p v-if="dateLabel || locationLabel" class="truncate text-hint">
+            <span v-if="dateLabel">{{ dateLabel }}</span>
+            <span v-if="dateLabel && locationLabel"> · </span>
+            <span v-if="locationLabel">{{ locationLabel }}</span>
+          </p>
+          <p
+            v-if="mobileSummary"
+            class="mt-0.5 truncate text-meta tabular-nums text-foreground sm:hidden"
+          >
+            {{ mobileSummary }}
+          </p>
+        </div>
+      </div>
+    </td>
+    <td
+      v-for="col in columns"
+      :key="col.key"
+      :class="['border-b border-border px-3 py-3 tabular-nums', col.cellClass]"
+    >
+      <p
+        v-if="cells[col.key].value !== '--'"
+        class="text-metric font-medium leading-tight whitespace-nowrap text-foreground"
       >
-        <component :is="presentation.icon" class="size-6" aria-hidden="true" />
-      </span>
-      <div class="min-w-0 flex-1">
-        <RouterLink
-          :to="{ name: 'activity', params: { id: activity.id } }"
-          class="block truncate font-medium text-foreground hover:underline"
-        >
-          {{ activity.name }}
-        </RouterLink>
-        <p v-if="dateLabel || locationLabel" class="truncate text-hint">
-          <span v-if="dateLabel">{{ dateLabel }}</span>
-          <span v-if="dateLabel && locationLabel"> · </span>
-          <span v-if="locationLabel">{{ locationLabel }}</span>
-        </p>
-        <p
-          v-if="mobileSummary"
-          class="mt-0.5 truncate text-meta tabular-nums text-foreground sm:hidden"
-        >
-          {{ mobileSummary }}
-        </p>
-      </div>
-    </div>
-
-    <!-- Headline metrics in fixed columns that align with the list header. -->
-    <div class="hidden min-w-0 flex-1 items-baseline justify-end gap-6 sm:flex">
-      <div v-for="col in columns" :key="col.key" :class="['tabular-nums', col.cellClass]">
-        <p
-          v-if="cells[col.key].value !== '--'"
-          class="text-metric font-medium leading-tight whitespace-nowrap text-foreground"
-        >
-          {{ cells[col.key].value }}
-          <span v-if="cells[col.key].unit" class="text-hint font-normal">{{
-            cells[col.key].unit
-          }}</span>
-        </p>
-        <p v-else class="text-metric font-medium leading-tight text-muted-foreground">—</p>
-      </div>
-    </div>
-  </div>
+        {{ cells[col.key].value }}
+        <span v-if="cells[col.key].unit" class="text-hint font-normal">{{
+          cells[col.key].unit
+        }}</span>
+      </p>
+      <p v-else class="text-metric font-medium leading-tight text-muted-foreground">—</p>
+    </td>
+  </tr>
 </template>

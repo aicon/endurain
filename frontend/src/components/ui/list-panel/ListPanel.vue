@@ -73,7 +73,11 @@ const showPagination = computed(
 </script>
 
 <template>
-  <Card padding="none" class="divide-y divide-border" :class="clip ? 'overflow-hidden' : undefined">
+  <Card
+    padding="none"
+    class="divide-y divide-border"
+    :class="clip ? 'overflow-hidden' : 'overflow-visible'"
+  >
     <slot v-if="showHeader && $slots.header" name="header" />
 
     <!-- Loading -->

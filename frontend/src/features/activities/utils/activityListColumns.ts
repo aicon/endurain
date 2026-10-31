@@ -13,10 +13,11 @@ export interface ActivityMetricColumn {
   /** i18n key for the column header label. */
   labelKey: string
   /**
-   * Shared width + alignment + responsive-visibility classes. The SAME class
-   * string is applied to the column header cell (in `ActivitiesView`) and to
-   * every row's value cell (in `ActivityListItem`) so the columns line up
-   * exactly; keep the two call sites in sync via this single source.
+   * Shared alignment + responsive-visibility classes. The SAME class string is
+   * applied to the column header cell (in `ActivitiesView`) and to every row's
+   * value cell (in `ActivityListItem`) so the columns line up; keep the two
+   * call sites in sync via this single source. Metric columns size to the
+   * header text (`whitespace-nowrap`, no fixed width).
    */
   cellClass: string
 }
@@ -28,17 +29,25 @@ export interface ActivityMetricColumn {
  * least-critical columns without shifting the rest.
  */
 export const ACTIVITY_METRIC_COLUMNS: readonly ActivityMetricColumn[] = [
-  { key: 'distance', labelKey: 'activities.list.columns.distance', cellClass: 'w-24 text-right' },
-  { key: 'duration', labelKey: 'activities.list.columns.duration', cellClass: 'w-20 text-right' },
+  {
+    key: 'distance',
+    labelKey: 'activities.list.columns.distance',
+    cellClass: 'hidden text-right whitespace-nowrap sm:table-cell',
+  },
+  {
+    key: 'duration',
+    labelKey: 'activities.list.columns.duration',
+    cellClass: 'hidden text-right whitespace-nowrap sm:table-cell',
+  },
   {
     key: 'paceSpeed',
     labelKey: 'activities.list.columns.paceSpeed',
-    cellClass: 'hidden w-32 text-right md:block',
+    cellClass: 'hidden text-right whitespace-nowrap md:table-cell',
   },
   {
     key: 'elevation',
     labelKey: 'activities.list.columns.elevation',
-    cellClass: 'hidden w-40 shrink-0 text-right whitespace-nowrap lg:block',
+    cellClass: 'hidden text-right whitespace-nowrap lg:table-cell',
   },
 ]
 
@@ -55,12 +64,12 @@ export const ACTIVITY_EXTRA_COLUMNS: Readonly<
   calories: {
     key: 'calories',
     labelKey: 'activities.list.columns.calories',
-    cellClass: 'w-20 text-right',
+    cellClass: 'hidden text-right whitespace-nowrap sm:table-cell',
   },
   average_hr: {
     key: 'avgHr',
     labelKey: 'activities.list.columns.avgHr',
-    cellClass: 'w-24 text-right',
+    cellClass: 'hidden text-right whitespace-nowrap sm:table-cell',
   },
 }
 

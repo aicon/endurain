@@ -34,7 +34,7 @@ const showCard = computed(() => showChrome.value && !route.meta.cardless)
         :class="{ 'my-auto': !showChrome }"
       >
         <ErrorBoundary>
-          <Card v-if="showCard" padding="lg">
+          <Card v-if="showCard" padding="lg" class="overflow-visible">
             <RouterView />
           </Card>
           <RouterView v-else />

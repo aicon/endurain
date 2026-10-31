@@ -560,11 +560,17 @@ function refetchList(): void {
           </EmptyState>
         </template>
 
-        <ul class="divide-y divide-border">
-          <li v-for="activity in activities" :key="activity.id">
-            <ActivityListItem :activity="activity" :units="units" :columns="visibleColumns" />
-          </li>
-        </ul>
+        <table class="w-full border-separate border-spacing-0">
+          <tbody>
+            <ActivityListItem
+              v-for="activity in activities"
+              :key="activity.id"
+              :activity="activity"
+              :units="units"
+              :columns="visibleColumns"
+            />
+          </tbody>
+        </table>
       </ListPanel>
     </section>
   </section>
