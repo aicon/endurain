@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest'
 
 import {
-  CAMERA_BEHIND_M,
+  LOOK_AT_M,
   bearingDegrees,
   chasePose,
   courseBearing,
@@ -54,15 +54,15 @@ describe('chasePose', () => {
     lng: index * 0.001,
   }))
 
-  it('looks east and sits west of the marker', () => {
+  it('looks east at a point ahead of the marker', () => {
     const pose = chasePose(east, 0.4, 90, true)
     expect(pose).not.toBeNull()
     if (!pose) {
       return
     }
     expect(pose.bearing).toBeCloseTo(90, 0)
-    expect(pose.camera.lng).toBeLessThan(pose.marker.lng)
-    expect(metersBetween(pose.camera, pose.marker)).toBeGreaterThan(CAMERA_BEHIND_M * 0.4)
+    expect(pose.lookAt.lng).toBeGreaterThan(pose.marker.lng)
+    expect(metersBetween(pose.lookAt, pose.marker)).toBeGreaterThan(LOOK_AT_M * 0.4)
   })
 
   it('does not yaw to a one-sample GPS spike', () => {

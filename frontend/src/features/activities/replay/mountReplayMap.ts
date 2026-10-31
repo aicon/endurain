@@ -15,11 +15,11 @@ setWorkerUrl(maplibreWorkerUrl)
 /** Open elevation tiles. No API key; the map credits Mapterhorn. */
 const TERRAIN_TILES = 'https://tiles.mapterhorn.com/{z}/{x}/{y}.webp'
 
-/** Chase-camera tilt, in degrees. Steeper values amplify heading noise. */
-const REPLAY_PITCH = 44
+/** Forward tilt: the camera sits behind the look-at point and sees the road. */
+const REPLAY_PITCH = 62
 
-/** Town-scale zoom so the chase view shows the surroundings, like Strava. */
-const REPLAY_ZOOM = 13
+/** Close enough that houses and the path pass by, Relive-style. */
+const REPLAY_ZOOM = 16.5
 
 /** A tilted map that follows one point on the route. */
 export interface ReplayMap {
@@ -119,11 +119,11 @@ export async function mountReplayMap(
           source: 'route',
           paint: {
             'line-color': color,
-            'line-width': 5,
+            'line-width': 7,
           },
         },
       ],
-      terrain: { source: 'terrain', exaggeration: 1 },
+      terrain: { source: 'terrain', exaggeration: 1.25 },
     },
   })
   map.addControl(new AttributionControl({ compact: true }), 'bottom-left')
@@ -142,27 +142,28 @@ export async function mountReplayMap(
   let bearing = 0
   let latestPoints = options.points
   let latestFraction = 0
-  let lastCamera: { lat: number; lng: number } | null = null
+  let lastLookAt: { lat: number; lng: number } | null = null
 
-  /** Keeps the camera behind the direction of travel. */
+  /** Looks down the route from just behind the athlete. */
   const aim = (snap: boolean): void => {
     const pose = chasePose(latestPoints, latestFraction, bearing, snap)
     if (!pose) {
       return
     }
     bearing = pose.bearing
-    const camera =
-      snap || !lastCamera
-        ? pose.camera
+    const lookAt =
+      snap || !lastLookAt
+        ? pose.lookAt
         : {
-            lat: lastCamera.lat + (pose.camera.lat - lastCamera.lat) * 0.28,
-            lng: lastCamera.lng + (pose.camera.lng - lastCamera.lng) * 0.28,
+            lat: lastLookAt.lat + (pose.lookAt.lat - lastLookAt.lat) * 0.35,
+            lng: lastLookAt.lng + (pose.lookAt.lng - lastLookAt.lng) * 0.35,
           }
-    lastCamera = camera
+    lastLookAt = lookAt
     map.jumpTo({
-      center: [camera.lng, camera.lat],
+      center: [lookAt.lng, lookAt.lat],
       bearing,
       pitch: REPLAY_PITCH,
+      zoom: REPLAY_ZOOM,
     })
     marker.setLngLat([pose.marker.lng, pose.marker.lat])
   }

@@ -5,11 +5,14 @@ import { indexAtFraction } from '@/features/activities/utils/scrub'
 /** Mean Earth radius, in metres. */
 const EARTH_M = 6_371_000
 
-/** How far along the route the camera looks, in metres. */
-export const LOOK_AHEAD_M = 140
+/** How far along the route heading is read, in metres. */
+export const LOOK_AHEAD_M = 60
 
-/** How far behind the marker the camera sits, in metres. */
-export const CAMERA_BEHIND_M = 90
+/** Ground point the map looks at, ahead of the athlete, in metres. */
+export const LOOK_AT_M = 22
+
+/** Fallback walk backward when there is no forward heading, in metres. */
+export const CAMERA_BEHIND_M = 40
 
 /** Ignore heading from a move shorter than this, so GPS jitter does not yaw. */
 export const MIN_HEADING_M = 8
@@ -21,8 +24,12 @@ export const BEARING_SMOOTH = 0.28
 export interface ChasePose {
   /** The athlete marker. */
   marker: GeoPoint
-  /** Map center, behind the marker along the route. */
-  camera: GeoPoint
+  /**
+   * Ground point in the middle of the view, ahead on the route.
+   * MapLibre's pitch sits the camera behind this point, so the road runs
+   * forward and the surroundings pass by.
+   */
+  lookAt: GeoPoint
   /** Compass heading the camera looks, 0–360. */
   bearing: number
 }
@@ -205,8 +212,11 @@ export function courseBearing(
 }
 
 /**
- * Chase-camera pose: look tens of metres ahead, sit behind the marker, and
- * ease the heading so GPS wiggles do not yaw the view.
+ * Chase-camera pose: look along the route from just behind the athlete.
+ *
+ * The map center is a few metres ahead. Pitched MapLibre then places the
+ * camera behind the athlete, so the path runs forward instead of a tilted
+ * map sliding under a pin.
  *
  * @param points - Ordered route.
  * @param fraction - Sample index fraction, 0–1.
@@ -233,9 +243,10 @@ export function chasePose(
     target = bearingDegrees(behind, here)
   }
   const bearing = snap ? target : mixBearing(previousBearing, target, BEARING_SMOOTH)
-  const camera =
-    metersBetween(behind, here) >= CAMERA_BEHIND_M * 0.45
-      ? behind
-      : offsetMeters(here, bearing + 180, CAMERA_BEHIND_M)
-  return { marker: here, camera, bearing }
+  const along = walkRoute(points, index, LOOK_AT_M)
+  const lookAt =
+    along && metersBetween(here, along) >= LOOK_AT_M * 0.4
+      ? along
+      : offsetMeters(here, bearing, LOOK_AT_M)
+  return { marker: here, lookAt, bearing }
 }
