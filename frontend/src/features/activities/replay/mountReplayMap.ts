@@ -24,6 +24,17 @@ setWorkerUrl(maplibreWorkerUrl)
 /** Open elevation tiles. No API key; the map credits Mapterhorn. */
 const TERRAIN_TILES = 'https://tiles.mapterhorn.com/{z}/{x}/{y}.webp'
 
+/** Esri World Imagery. Public raster; no API key. */
+const SATELLITE_TILES =
+  'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}'
+
+/** Place names and boundaries over the imagery. */
+const HYBRID_LABEL_TILES =
+  'https://server.arcgisonline.com/ArcGIS/rest/services/Reference/World_Boundaries_and_Places/MapServer/tile/{z}/{y}/{x}'
+
+const SATELLITE_ATTRIBUTION =
+  'Tiles &copy; Esri &mdash; Source: Esri, i-cubed, USDA, USGS, AEX, GeoEye, Getmapping, Aerogrid, IGN, IGP, UPR-EGP, and the GIS User Community'
+
 /**
  * Horizon / fog fill. MapLibre v6 has no Mapbox `setFog()`; atmosphere lives on
  * `sky`. This colour also paints the canvas so far tiles do not flash white.
@@ -74,9 +85,12 @@ export interface ReplayMap {
 export interface ReplayMapOptions {
   /** Ordered route points. */
   points: readonly GeoPoint[]
-  /** Raster tile template, the same one the flat map uses. */
+  /**
+   * Raster tile template of the closed Leaflet map. Unused while playing:
+   * the chase camera uses Esri World Imagery instead.
+   */
   tileUrl: string
-  /** HTML attribution for those tiles. */
+  /** HTML attribution for {@link ReplayMapOptions.tileUrl}. Unused while playing. */
   attribution: string
   /** Sample fraction to open on, 0–1. */
   fraction?: number
@@ -189,11 +203,18 @@ export async function mountReplayMap(
     style: {
       version: 8,
       sources: {
-        base: {
+        satellite: {
           type: 'raster',
-          tiles: [options.tileUrl],
+          tiles: [SATELLITE_TILES],
           tileSize: 256,
-          attribution: options.attribution,
+          maxzoom: 19,
+          attribution: SATELLITE_ATTRIBUTION,
+        },
+        'hybrid-labels': {
+          type: 'raster',
+          tiles: [HYBRID_LABEL_TILES],
+          tileSize: 256,
+          maxzoom: 19,
         },
         terrain: {
           type: 'raster-dem',
@@ -221,7 +242,12 @@ export async function mountReplayMap(
           type: 'background',
           paint: { 'background-color': FOG_COLOR },
         },
-        { id: 'base', type: 'raster', source: 'base' },
+        {
+          id: 'satellite-layer',
+          type: 'raster',
+          source: 'satellite',
+          paint: { 'raster-fade-duration': 300 },
+        },
         {
           id: 'hillshade',
           type: 'hillshade',
@@ -229,10 +255,16 @@ export async function mountReplayMap(
           paint: {
             'hillshade-illumination-direction': 315,
             'hillshade-illumination-anchor': 'map',
-            'hillshade-exaggeration': 0.32,
+            'hillshade-exaggeration': 0.18,
             'hillshade-shadow-color': '#0a1220',
             'hillshade-highlight-color': '#ffffff',
           },
+        },
+        {
+          id: 'hybrid-labels-layer',
+          type: 'raster',
+          source: 'hybrid-labels',
+          paint: { 'raster-opacity': 0.85 },
         },
         {
           id: 'replay-route-remain',

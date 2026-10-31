@@ -103,12 +103,15 @@ class SecurityHeadersMiddleware(BaseHTTPMiddleware):
             extra_connect_src = core_config.settings.CSP_ADDITIONAL_CONNECT_SRC
             if extra_connect_src:
                 connect_src = f"{connect_src} {' '.join(extra_connect_src)}"
-            connect_src = f"{connect_src} {tile_domains_str} https://tiles.mapterhorn.com"
+            connect_src = (
+                f"{connect_src} {tile_domains_str} "
+                "https://tiles.mapterhorn.com https://*.arcgisonline.com"
+            )
 
             response.headers["Content-Security-Policy"] = (
                 "default-src 'self'; "
                 f"img-src 'self' data: {tile_domains_str}{blob_src} "
-                "https://fastapi.tiangolo.com; "
+                "https://fastapi.tiangolo.com https://*.arcgisonline.com; "
                 "style-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net; "
                 "script-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net; "
                 "worker-src 'self' blob:; "

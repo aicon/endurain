@@ -580,7 +580,8 @@ class TestSecurityHeadersMiddleware:
         csp = response.headers["Content-Security-Policy"]
         assert (
             "connect-src 'self' https://cdn.jsdelivr.net https://api.github.com "
-            "https://*.openstreetmap.org https://*.stadiamaps.com https://tiles.mapterhorn.com;"
+            "https://*.openstreetmap.org https://*.stadiamaps.com "
+            "https://tiles.mapterhorn.com https://*.arcgisonline.com;"
             in csp
         )
         assert "worker-src 'self' blob:;" in csp
@@ -609,6 +610,7 @@ class TestSecurityHeadersMiddleware:
         assert (
             "connect-src 'self' https://cdn.jsdelivr.net https://api.github.com "
             "https://auth.example.com https://proxy.example.com "
-            "https://*.openstreetmap.org https://*.stadiamaps.com https://tiles.mapterhorn.com;"
+            "https://*.openstreetmap.org https://*.stadiamaps.com "
+            "https://tiles.mapterhorn.com https://*.arcgisonline.com;"
             in csp
         )

@@ -45,7 +45,7 @@ const CONTENT_SECURITY_POLICY = [
   // (from ENDURAIN_HOST), which rewrites this directive by matching to the end of
   // the meta `content` attribute — so connect-src MUST stay the LAST directive,
   // and start.sh must keep every host listed here.
-  "connect-src 'self' https://api.github.com https://*.openstreetmap.org https://*.stadiamaps.com https://tiles.mapterhorn.com",
+  "connect-src 'self' https://api.github.com https://*.openstreetmap.org https://*.stadiamaps.com https://tiles.mapterhorn.com https://*.arcgisonline.com",
 ].join('; ')
 
 /**
