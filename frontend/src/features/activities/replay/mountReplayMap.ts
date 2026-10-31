@@ -207,14 +207,14 @@ export async function mountReplayMap(
           type: 'raster',
           tiles: [SATELLITE_TILES],
           tileSize: 256,
-          maxzoom: 19,
+          maxzoom: 18,
           attribution: SATELLITE_ATTRIBUTION,
         },
         'hybrid-labels': {
           type: 'raster',
           tiles: [HYBRID_LABEL_TILES],
           tileSize: 256,
-          maxzoom: 19,
+          maxzoom: 18,
         },
         terrain: {
           type: 'raster-dem',
@@ -264,7 +264,7 @@ export async function mountReplayMap(
           id: 'hybrid-labels-layer',
           type: 'raster',
           source: 'hybrid-labels',
-          paint: { 'raster-opacity': 0.85 },
+          paint: { 'raster-opacity': 0.85, 'raster-fade-duration': 300 },
         },
         {
           id: 'replay-route-remain',
