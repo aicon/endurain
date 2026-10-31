@@ -63,6 +63,7 @@ const container = ref<HTMLElement | null>(null)
 const replayHost = ref<HTMLElement | null>(null)
 const playing = ref(false)
 const open = ref(false)
+const tilted = ref(false)
 const speed = ref<ReplaySpeed>(1)
 let replayMap: ReplayMap | null = null
 let replayMount = 0
@@ -136,8 +137,8 @@ function pause(): void {
   cancelClock()
 }
 
-/** Moves the route marker. While following, the point stays in the center. */
-function moveCursor(fraction: number, followCamera: boolean): void {
+/** Moves the route marker. While following, the chase camera sits behind it. */
+function moveCursor(fraction: number, followCamera: boolean, snap = false): void {
   const point = pointAtFraction(props.points, fraction)
   if (!point) {
     return
@@ -147,7 +148,7 @@ function moveCursor(fraction: number, followCamera: boolean): void {
     return
   }
   if (replayMap) {
-    replayMap.follow(props.points, fraction)
+    replayMap.follow(props.points, fraction, snap)
     return
   }
   instance?.panTo(point)
@@ -178,7 +179,11 @@ function seek(fraction: number): void {
     }
   }
   emit('replay', next)
-  moveCursor(next, true)
+  if (next >= 1 && tilted.value) {
+    restoreOverview()
+    return
+  }
+  moveCursor(next, true, true)
 }
 
 /**
@@ -200,25 +205,31 @@ function tick(now: number): void {
   })
   scrubModel.value = step.fraction
   emit('replay', step.fraction)
-  moveCursor(step.fraction, true)
+  moveCursor(step.fraction, true, false)
   if (step.done) {
     playing.value = false
+    restoreOverview()
     return
   }
   frame = requestAnimationFrame(tick)
 }
 
 /** Starts playback from the current cursor, or from the start at the end. */
-function play(): void {
+async function play(): Promise<void> {
   const current = scrubModel.value
   origin = current >= 1 ? 0 : current
   if (current >= 1) {
     scrubModel.value = 0
     emit('replay', 0)
-    moveCursor(0, true)
+    moveCursor(0, false)
   }
-  startedAt = performance.now()
   playing.value = true
+  await mountTilted()
+  if (!playing.value || !open.value) {
+    return
+  }
+  moveCursor(scrubModel.value, true, true)
+  startedAt = performance.now()
   cancelClock()
   frame = requestAnimationFrame(tick)
 }
@@ -265,13 +276,29 @@ function closeTilted(): void {
   replayMount += 1
   replayMap?.destroy()
   replayMap = null
+  tilted.value = false
+}
+
+/** Shows the whole Leaflet track after leaving the chase camera. */
+function restoreOverview(): void {
+  closeTilted()
+  instance?.recenter()
 }
 
 /** Opens the pitched camera over the current point. */
 async function mountTilted(): Promise<void> {
+  if (replayMap) {
+    replayMap.follow(props.points, scrubModel.value, true)
+    return
+  }
+  if (!open.value) {
+    return
+  }
+  tilted.value = true
   await nextTick()
   const host = replayHost.value
   if (!host || !open.value) {
+    tilted.value = false
     return
   }
   const generation = ++replayMount
@@ -279,31 +306,30 @@ async function mountTilted(): Promise<void> {
   if (generation !== replayMount || !open.value) {
     return
   }
-  replayMap?.destroy()
   try {
-    replayMap = await mountReplayMap(host, {
+    const mapHandle = await mountReplayMap(host, {
       points: props.points,
       tileUrl: config.value.map.tileUrl,
       attribution: config.value.map.attribution,
     })
+    if (generation !== replayMount || !open.value) {
+      mapHandle.destroy()
+      tilted.value = false
+      return
+    }
+    replayMap = mapHandle
+    mapHandle.follow(props.points, scrubModel.value, true)
   } catch (error) {
     replayMap = null
+    tilted.value = false
     console.error('Could not open the tilted replay map', error)
-    return
   }
-  if (generation !== replayMount || !open.value) {
-    replayMap.destroy()
-    replayMap = null
-    return
-  }
-  replayMap.follow(props.points, scrubModel.value)
-  requestAnimationFrame(() => replayMap?.follow(props.points, scrubModel.value))
 }
 
 /** Re-fits the map to the whole track after the user has panned or zoomed. */
 function recenter(): void {
   pause()
-  instance?.recenter()
+  restoreOverview()
 }
 
 onMounted(mountMap)
@@ -321,14 +347,13 @@ watch(
       track: { points, ...endpoints(points) },
       interactive: props.interactive,
     })
-    replayMap?.setTrack(points)
+    closeTilted()
   },
 )
 watch(open, (isOpen) => {
-  if (isOpen) {
-    void mountTilted()
-  } else {
-    closeTilted()
+  if (!isOpen) {
+    pause()
+    restoreOverview()
   }
 })
 watch(
@@ -366,7 +391,7 @@ onBeforeUnmount(() => {
     <div
       ref="container"
       class="size-full"
-      :class="open ? 'invisible' : undefined"
+      :class="tilted ? 'invisible' : undefined"
       role="img"
       :aria-label="$t('activities.map.label')"
       @pointerdown="onMapPointerDown"
@@ -375,7 +400,7 @@ onBeforeUnmount(() => {
          must not sit on this overlay: it would drop the camera out of the
          frame and leave the flat Leaflet map in view. -->
     <div
-      v-if="open"
+      v-if="tilted"
       class="replay-host absolute inset-0 z-[1050] bg-muted"
       @pointerdown="onMapPointerDown"
     >
@@ -420,7 +445,7 @@ onBeforeUnmount(() => {
         type="button"
         class="flex size-8 shrink-0 items-center justify-center rounded-full transition-colors hover:bg-white/10"
         :aria-label="playing ? $t('activities.replay.pause') : $t('activities.replay.play')"
-        @click="playing ? pause() : play()"
+        @click="playing ? pause() : void play()"
       >
         <Pause v-if="playing" class="size-4" />
         <Play v-else class="size-4" />

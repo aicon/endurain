@@ -1,11 +1,26 @@
 import { describe, expect, it } from 'vitest'
 
-import { bearingDegrees, courseBearing } from '@/features/activities/utils/course'
+import {
+  CAMERA_BEHIND_M,
+  bearingDegrees,
+  chasePose,
+  courseBearing,
+  metersBetween,
+  mixBearing,
+  shortestBearingDelta,
+} from '@/features/activities/utils/course'
 
 describe('bearingDegrees', () => {
   it('looks east and north', () => {
     expect(bearingDegrees({ lat: 0, lng: 0 }, { lat: 0, lng: 1 })).toBeCloseTo(90, 5)
     expect(bearingDegrees({ lat: 0, lng: 0 }, { lat: 1, lng: 0 })).toBeCloseTo(0, 5)
+  })
+})
+
+describe('mixBearing', () => {
+  it('takes the short turn across north', () => {
+    expect(shortestBearingDelta(350, 10)).toBeCloseTo(20, 5)
+    expect(mixBearing(350, 10, 0.5)).toBeCloseTo(0, 5)
   })
 })
 
@@ -30,5 +45,49 @@ describe('courseBearing', () => {
       { lat: 1, lng: 1 },
     ]
     expect(courseBearing(stuck, 0.4, 33)).toBe(33)
+  })
+})
+
+describe('chasePose', () => {
+  const east = Array.from({ length: 12 }, (_, index) => ({
+    lat: 0,
+    lng: index * 0.001,
+  }))
+
+  it('looks east and sits west of the marker', () => {
+    const pose = chasePose(east, 0.4, 90, true)
+    expect(pose).not.toBeNull()
+    if (!pose) {
+      return
+    }
+    expect(pose.bearing).toBeCloseTo(90, 0)
+    expect(pose.camera.lng).toBeLessThan(pose.marker.lng)
+    expect(metersBetween(pose.camera, pose.marker)).toBeGreaterThan(CAMERA_BEHIND_M * 0.4)
+  })
+
+  it('does not yaw to a one-sample GPS spike', () => {
+    const spiked = [
+      { lat: 0, lng: 0 },
+      { lat: 0, lng: 0.001 },
+      { lat: 0.0002, lng: 0.00105 },
+      { lat: 0, lng: 0.002 },
+      { lat: 0, lng: 0.003 },
+      { lat: 0, lng: 0.004 },
+    ]
+    const pose = chasePose(spiked, 1 / 5, 90, true)
+    expect(pose).not.toBeNull()
+    if (!pose) {
+      return
+    }
+    expect(Math.abs(shortestBearingDelta(90, pose.bearing))).toBeLessThan(35)
+  })
+
+  it('keeps the previous heading when the route does not move', () => {
+    const stuck = [
+      { lat: 1, lng: 1 },
+      { lat: 1, lng: 1 },
+    ]
+    const pose = chasePose(stuck, 0.5, 33, true)
+    expect(pose?.bearing).toBe(33)
   })
 })

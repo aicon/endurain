@@ -4,8 +4,7 @@ import 'maplibre-gl/dist/maplibre-gl.css'
 
 import type { GeoPoint } from '@/composables/useMapProvider'
 
-import { courseBearing } from '@/features/activities/utils/course'
-import { pointAtFraction } from '@/features/activities/utils/scrub'
+import { chasePose } from '@/features/activities/utils/course'
 import { themeColor } from '@/lib/themeColor'
 
 // The bundled worker must be a same-origin file. MapLibre's default URL points
@@ -16,16 +15,20 @@ setWorkerUrl(maplibreWorkerUrl)
 /** Open elevation tiles. No API key; the map credits Mapterhorn. */
 const TERRAIN_TILES = 'https://tiles.mapterhorn.com/{z}/{x}/{y}.webp'
 
-/** Chase-camera tilt, in degrees. */
-const REPLAY_PITCH = 60
+/** Chase-camera tilt, in degrees. Steeper values amplify heading noise. */
+const REPLAY_PITCH = 44
 
 /** Street-level zoom for the chase camera. The viewer can still zoom. */
 const REPLAY_ZOOM = 15
 
 /** A tilted map that follows one point on the route. */
 export interface ReplayMap {
-  /** Aims the camera from behind the direction of travel. */
-  follow(points: readonly GeoPoint[], fraction: number): void
+  /**
+   * Aims the camera from behind the direction of travel.
+   *
+   * @param snap - Jump instead of easing. Use on seek and the first frame.
+   */
+  follow(points: readonly GeoPoint[], fraction: number, snap?: boolean): void
   /** Replaces the drawn route. */
   setTrack(points: readonly GeoPoint[]): void
   /** Releases the WebGL map. */
@@ -120,7 +123,7 @@ export async function mountReplayMap(
           },
         },
       ],
-      terrain: { source: 'terrain', exaggeration: 1.3 },
+      terrain: { source: 'terrain', exaggeration: 1 },
     },
   })
   map.addControl(new AttributionControl({ compact: true }), 'bottom-left')
@@ -139,38 +142,48 @@ export async function mountReplayMap(
   let bearing = 0
   let latestPoints = options.points
   let latestFraction = 0
+  let lastCamera: { lat: number; lng: number } | null = null
 
   /** Keeps the camera behind the direction of travel. */
-  const aim = (): void => {
-    const point = pointAtFraction(latestPoints, latestFraction)
-    if (!point) {
+  const aim = (snap: boolean): void => {
+    const pose = chasePose(latestPoints, latestFraction, bearing, snap)
+    if (!pose) {
       return
     }
-    bearing = courseBearing(latestPoints, latestFraction, bearing)
+    bearing = pose.bearing
+    const camera =
+      snap || !lastCamera
+        ? pose.camera
+        : {
+            lat: lastCamera.lat + (pose.camera.lat - lastCamera.lat) * 0.28,
+            lng: lastCamera.lng + (pose.camera.lng - lastCamera.lng) * 0.28,
+          }
+    lastCamera = camera
     map.jumpTo({
-      center: [point.lng, point.lat],
+      center: [camera.lng, camera.lat],
       bearing,
       pitch: REPLAY_PITCH,
     })
-    marker.setLngLat([point.lng, point.lat])
+    marker.setLngLat([pose.marker.lng, pose.marker.lat])
   }
 
-  const fit = (): void => {
+  map.on('load', () => {
     map.resize()
-    aim()
-  }
-
-  map.on('load', fit)
+    aim(true)
+  })
   map.on('error', (event) => {
     console.error('Tilted replay map', event.error)
   })
-  requestAnimationFrame(fit)
+  requestAnimationFrame(() => {
+    map.resize()
+    aim(true)
+  })
 
   return {
-    follow(points, fraction) {
+    follow(points, fraction, snap = false) {
       latestPoints = points
       latestFraction = fraction
-      fit()
+      aim(snap)
     },
     setTrack(points) {
       latestPoints = points
