@@ -46,6 +46,10 @@ On the activity detail page the chart grid is heart rate, altitude, heart-rate z
 
 The owner three-dot menu on the activity page and the home card includes **Download activity** (`Tevékenység letöltése`). It returns the retained import file (GPX, TCX, or FIT) when Endurain still has it, otherwise a GPX 1.1 rebuilt from stored streams (track, elevation, heart rate, cadence, calories). Photos are not included.
 
+On a phone in portrait, the home page shows the Goals card first. Add activity and the mine/following tabs stay below it. Landscape phones, tablets, and desktop keep the original three-column layout.
+
+The GPS track polyline on Leaflet maps, home/detail thumbnails, and the replay route line are 25% thinner than before. Already-rendered thumbnails keep the old width until that activity is imported again.
+
 The activity map can play the recorded GPS stream. The speed buttons still read 0.5×, 1×, 2×, 4× and 8×; playback itself runs at fifteen times the label. While the player is open the map is a pitched MapLibre chase camera on Esri World Imagery with place labels (Mapterhorn terrain, no API key). Fast straights pull out to a valley panorama; hairpins drop in close. Towns and peaks from Overpass appear as a floating board. The cursor is a heading chevron. Play starts from a flat map and eases into 3D. Closing the player, or reaching the end of the clip, restores the Leaflet overview. Home thumbnails stay Leaflet. This replay is a new feature on the fork. It is not proposed upstream, and it does not call the Relive service.
 
 Proposed upstream:

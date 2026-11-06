@@ -326,8 +326,8 @@ function onRefresh(): void {
       </template>
     </section>
 
-    <!-- Right sidebar (hidden on small screens, matching v1). -->
-    <aside class="hidden flex-col gap-3 lg:col-span-3 lg:flex">
+    <!-- Goals: right column on desktop/landscape; first on portrait phones. -->
+    <aside class="home-goals-column hidden flex-col gap-3 lg:col-span-3 lg:flex">
       <UserGoalResults
         :goals="goalResults.data.value ?? []"
         :units="units"
@@ -336,3 +336,12 @@ function onRefresh(): void {
     </aside>
   </div>
 </template>
+
+<style scoped>
+@media (orientation: portrait) and (max-width: 1023px) {
+  .home-goals-column {
+    display: flex !important;
+    order: -1;
+  }
+}
+</style>

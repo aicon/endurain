@@ -46,6 +46,8 @@ export interface LeafletMapProviderConfig {
 }
 
 const DEFAULT_MAX_ZOOM = 19
+/** Visible GPS polyline width. 3 is 25% thinner than the previous 4. */
+const TRACK_LINE_WEIGHT = 3
 /** Brand teal track colour, from the `--color-brand` design token. */
 const DEFAULT_TRACK_COLOR = themeColor('--color-brand')
 /** Start-marker fill — the `--color-goal` design token (green). */
@@ -167,7 +169,11 @@ export function createLeafletMapProvider(config: LeafletMapProviderConfig = {}):
 
         const linePoints = toLatLngs(track.points)
         if (linePoints.length > 0) {
-          const visible = polyline(linePoints, { color: trackColor, weight: 4, interactive: false })
+          const visible = polyline(linePoints, {
+            color: trackColor,
+            weight: TRACK_LINE_WEIGHT,
+            interactive: false,
+          })
           const hit = polyline(linePoints, { color: trackColor, weight: 20, opacity: 0.01 })
           const move = (event: LeafletMouseEvent): void => {
             if (!onTrackHover || track.points.length === 0) {
