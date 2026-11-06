@@ -8,7 +8,9 @@
  */
 import {
   circleMarker,
+  divIcon,
   map as createMap,
+  marker,
   polyline,
   tileLayer,
   type CircleMarker,
@@ -52,8 +54,7 @@ const TRACK_LINE_WEIGHT = 2.25
 const DEFAULT_TRACK_COLOR = themeColor('--color-brand')
 /** Start-marker fill — the `--color-goal` design token (green). */
 const START_MARKER_COLOR = themeColor('--color-goal')
-/** Finish-marker fill — the `--color-hr` design token (red). */
-const FINISH_MARKER_COLOR = themeColor('--color-hr')
+const ROUTE_PIN_PX = 22
 
 /**
  * Converts seam {@link GeoPoint}s to Leaflet `[lat, lng]` tuples.
@@ -101,22 +102,59 @@ export function boundsOf(track: MapTrack): [LatLngTuple, LatLngTuple] | null {
   ]
 }
 
+/** Drops Leaflet's default white box around a div icon. */
+function ensureRoutePinStyle(): void {
+  if (document.getElementById('endurain-route-pin-style')) {
+    return
+  }
+  const style = document.createElement('style')
+  style.id = 'endurain-route-pin-style'
+  style.textContent = '.endurain-route-pin{background:transparent;border:none;}'
+  document.head.appendChild(style)
+}
+
+/** Leaflet div icon centred on the track point. */
+function routePin(point: GeoPoint, html: string): Layer {
+  ensureRoutePinStyle()
+  return marker([point.lat, point.lng], {
+    icon: divIcon({
+      className: 'endurain-route-pin',
+      html,
+      iconSize: [ROUTE_PIN_PX, ROUTE_PIN_PX],
+      iconAnchor: [ROUTE_PIN_PX / 2, ROUTE_PIN_PX / 2],
+    }),
+    interactive: false,
+    keyboard: false,
+  })
+}
+
 /**
- * Builds a circular emphasis marker with a white border and coloured fill,
- * used for the start (green) and finish (red) points.
+ * Green play button for the start of a track.
  *
  * @param point - The marker location.
- * @param color - The fill colour.
- * @returns A Leaflet circle-marker layer.
+ * @returns A Leaflet marker layer.
  */
-function emphasisMarker(point: GeoPoint, color: string): Layer {
-  return circleMarker([point.lat, point.lng], {
-    radius: 7,
-    color: '#ffffff',
-    weight: 3,
-    fillColor: color,
-    fillOpacity: 1,
-  })
+function startMarker(point: GeoPoint): Layer {
+  const html =
+    `<div style="box-sizing:border-box;width:${ROUTE_PIN_PX}px;height:${ROUTE_PIN_PX}px;border-radius:50%;` +
+    `background:${START_MARKER_COLOR};border:1.5px solid #ffffff;display:flex;align-items:center;justify-content:center;">` +
+    `<div style="width:0;height:0;margin-left:2px;border-style:solid;border-width:6px 0 6px 9px;` +
+    `border-color:transparent transparent transparent #111111;"></div></div>`
+  return routePin(point, html)
+}
+
+/**
+ * Checkered disc for the end of a track, the Strava finish marker.
+ *
+ * @param point - The marker location.
+ * @returns A Leaflet marker layer.
+ */
+function finishMarker(point: GeoPoint): Layer {
+  const html =
+    `<div style="box-sizing:border-box;width:${ROUTE_PIN_PX}px;height:${ROUTE_PIN_PX}px;border-radius:50%;` +
+    `border:1.5px solid #ffffff;box-shadow:inset 0 0 0 1px #222222;` +
+    `background:repeating-conic-gradient(#111111 0% 25%,#ffffff 0% 50%) 0 0/10px 10px;"></div>`
+  return routePin(point, html)
 }
 
 /**
@@ -190,10 +228,10 @@ export function createLeafletMapProvider(config: LeafletMapProviderConfig = {}):
           overlays.push(visible.addTo(map), hit.addTo(map))
         }
         if (track.start) {
-          overlays.push(emphasisMarker(track.start, START_MARKER_COLOR).addTo(map))
+          overlays.push(startMarker(track.start).addTo(map))
         }
         if (track.finish) {
-          overlays.push(emphasisMarker(track.finish, FINISH_MARKER_COLOR).addTo(map))
+          overlays.push(finishMarker(track.finish).addTo(map))
         }
 
         fit(track)

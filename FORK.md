@@ -52,6 +52,8 @@ The center column shows the mine/following tabs, then a month calendar with a bo
 
 The GPS track polyline on Leaflet maps, home/detail thumbnails, and the replay route line is another 25% thinner. Already-rendered thumbnails keep the previous width until that activity is imported again.
 
+On the activity map the start is a green play button and the finish is a checkered disc. Home thumbnails still use the plain dots.
+
 The activity map can play the recorded GPS stream. The speed buttons still read 0.5×, 1×, 2×, 4× and 8×; playback itself runs at fifteen times the label. While the player is open the map is a pitched MapLibre chase camera on Esri World Imagery with place labels (Mapterhorn terrain, no API key). Fast straights pull out to a valley panorama; hairpins drop in close. Towns and peaks from Overpass appear as a floating board. The cursor is a heading chevron. Play starts from a flat map and eases into 3D. Closing the player, or reaching the end of the clip, restores the Leaflet overview. Home thumbnails stay Leaflet. This replay is a new feature on the fork. It is not proposed upstream, and it does not call the Relive service.
 
 Proposed upstream:
