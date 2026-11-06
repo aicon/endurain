@@ -1,10 +1,16 @@
-# Unofficial fork
+# Unofficial fork of Endurain®
 
-This is a fork of [Endurain](https://github.com/endurain-project/endurain) v0.20.2. It is not the official project, and it is not endorsed by the Endurain maintainers.
+This is a **non-commercial fork** of [Endurain](https://github.com/endurain-project/endurain) v0.20.2, kept under the same AGPL-3.0 license and João Vitória Silva’s trademark rules. It is **not** the official project, it is **not endorsed** by the Endurain maintainers, and it must not be presented as an official service or as paid Endurain hosting.
 
-Endurain® is a registered trademark of João Vitória Silva.
+- Upstream: [endurain-project/endurain](https://github.com/endurain-project/endurain)
+- This repository: [aicon/endurain](https://github.com/aicon/endurain)
+- Image: `ghcr.io/aicon/endurain:0.20.2-place` (does not replace `ghcr.io/endurain-project/endurain`)
+- Docs for the original product: [docs.endurain.com](https://docs.endurain.com)
+- Trademark: [`TRADEMARK.md`](./TRADEMARK.md) (kept as the original author published it)
 
-Local `master` tracks upstream `master` by rebase. The last sync was 2026-10-31.
+The original README, contributing guide, license, and trademark policy stay in this tree so upstream expectations remain visible. This file is the only place that describes **fork-only** behaviour.
+
+Local `master` tracks upstream `master` by rebase. The last sync was 2026-10-31. This fork is moving toward a long-lived independent repo, still based on Endurain, still crediting the original author.
 
 ## What this fork changes
 
@@ -32,7 +38,11 @@ On a phone the map sticks under the top bar while the page scrolls, and the char
 
 Hovering one chart draws the same moment on the other charts and moves a point along the route. Hovering the route moves the chart lines. The line is an HTML overlay and the map point only changes position, so the charts are not redrawn on each move.
 
-The summary row shows elapsed time after moving time. Each metric caption has a small icon in front of the label. Open-Meteo weather is a line under the date and device, above the activity title. It is fetched on first open if the import backfill missed it.
+The summary row shows elapsed time after moving time. Each metric caption has a small icon in front of the label.
+
+Open-Meteo weather sits under the date and device, above the activity title. It is fetched on import and again on first open if the backfill missed it. The row uses coloured condition, humidity, and wind icons. Condition, “humidity”, and compass labels come from the locale files (English, Hungarian, and the other bundled languages via English fallback).
+
+On the activity detail page the chart grid is heart rate, altitude, heart-rate zones, then pace or speed and the rest.
 
 The activity map can play the recorded GPS stream. The speed buttons still read 0.5×, 1×, 2×, 4× and 8×; playback itself runs at fifteen times the label. While the player is open the map is a pitched MapLibre chase camera on Esri World Imagery with place labels (Mapterhorn terrain, no API key). Fast straights pull out to a valley panorama; hairpins drop in close. Towns and peaks from Overpass appear as a floating board. The cursor is a heading chevron. Play starts from a flat map and eases into 3D. Closing the player, or reaching the end of the clip, restores the Leaflet overview. Home thumbnails stay Leaflet. This replay is a new feature on the fork. It is not proposed upstream, and it does not call the Relive service.
 
@@ -52,4 +62,12 @@ Same container layout as upstream v0.20.2, plus the summary-card, device, settle
 
 It does not replace `ghcr.io/endurain-project/endurain`. Drop this image when you move back to an official release.
 
-Backend lint, backend tests, the documentation site, and the GitLab mirror do not run on this fork. They fail here: the settlement parser uses a private import, this repository has no GitHub Pages site, and it has no GitLab token. OpenAPI drift and the distributed backend tests still run.
+## CI on this fork
+
+Frontend lint (Prettier, oxlint, ESLint, vue-tsc, unit tests), OpenAPI type drift, and the distributed backend tests run here on `master`.
+
+Backend unit tests, backend ruff, the documentation site, and the GitLab mirror stay skipped on this repository, as they do on purpose:
+
+- The settlement parser still uses a JASIL private import that João’s architecture test forbids. That change is in the upstream PRs; it is not rewritten here just to green a skip.
+- This repository has no GitHub Pages site for `docs.endurain.com`.
+- This repository has no GitLab mirror token. João’s official mirror stays on the upstream project.

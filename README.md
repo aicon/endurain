@@ -1,4 +1,7 @@
 > [!NOTE]
+> **This repository is an unofficial fork** of [endurain-project/endurain](https://github.com/endurain-project/endurain) at v0.20.2. It is **not** the official Endurain project and is **not endorsed** by the Endurain maintainers. What this fork adds is listed in [FORK.md](./FORK.md). Endurain® is a registered trademark of João Vitória Silva. See [`TRADEMARK.md`](./TRADEMARK.md).
+
+> [!NOTE]
 > **Endurain is on a temporary feature freeze** - The project is not paused. The focus is shifting from new features to strengthening the foundations. More details [here](https://docs.endurain.com/blog/2026/05/23/pausing-new-features-so-endurain-can-keep-growing/)
 
 <div align="center">
