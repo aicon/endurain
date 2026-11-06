@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, ref } from 'vue'
+import { computed, onMounted, onUnmounted, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { Activity as ActivityIcon, Plus, RefreshCw, Users as UsersIcon } from '@lucide/vue'
 import type { LucideIcon } from '@lucide/vue'
@@ -37,6 +37,26 @@ import {
 
 const { t } = useI18n()
 const toasts = useToasts()
+
+/** Portrait phone: only the Goals card sits above the activity list. */
+const PORTRAIT_PHONE = '(orientation: portrait) and (max-width: 1023px)'
+const isPortraitPhone = ref(
+  typeof window !== 'undefined' && window.matchMedia(PORTRAIT_PHONE).matches,
+)
+
+let stopPortraitWatch = (): void => {}
+
+onMounted(() => {
+  const media = window.matchMedia(PORTRAIT_PHONE)
+  const sync = (): void => {
+    isPortraitPhone.value = media.matches
+  }
+  sync()
+  media.addEventListener('change', sync)
+  stopPortraitWatch = () => media.removeEventListener('change', sync)
+})
+
+onUnmounted(() => stopPortraitWatch())
 
 const { data: currentUser } = useCurrentUser()
 const units = useDisplayUnits()
@@ -198,7 +218,7 @@ function onRefresh(): void {
 <template>
   <div class="grid grid-cols-1 gap-3 lg:grid-cols-12">
     <!-- Left sidebar -->
-    <aside class="home-side-column flex flex-col gap-3 lg:col-span-3">
+    <aside v-if="!isPortraitPhone" class="flex flex-col gap-3 lg:col-span-3">
       <!-- Profile (photo + username) — hidden on small screens. -->
       <div class="hidden lg:block">
         <HomeProfileCard
@@ -256,10 +276,8 @@ function onRefresh(): void {
 
     <!-- Center feed -->
     <section class="flex flex-col gap-3 lg:col-span-6">
-      <HomeActivityCalendar class="home-calendar" />
-
       <!-- Scope toggle. Hidden on a portrait phone. -->
-      <div class="home-feed-tabs">
+      <div v-if="!isPortraitPhone">
         <Tabs v-model="scopeModel">
           <TabsList class="grid w-full grid-cols-2" :aria-label="t('home.feed.scopeLabel')">
             <TabsTrigger
@@ -274,6 +292,8 @@ function onRefresh(): void {
           </TabsList>
         </Tabs>
       </div>
+
+      <HomeActivityCalendar v-if="!isPortraitPhone" />
 
       <!-- Loading -->
       <div v-if="isPending" class="flex flex-col gap-3" aria-busy="true">
@@ -331,8 +351,11 @@ function onRefresh(): void {
       </template>
     </section>
 
-    <!-- Goals: right column on desktop/landscape; first on portrait phones. -->
-    <aside class="home-goals-column hidden flex-col gap-3 lg:col-span-3 lg:flex">
+    <!-- Goals: right column on desktop/landscape; the only card above the feed on a portrait phone. -->
+    <aside
+      class="flex-col gap-3 lg:col-span-3"
+      :class="isPortraitPhone ? 'order-first flex' : 'hidden lg:flex'"
+    >
       <UserGoalResults
         :goals="goalResults.data.value ?? []"
         :units="units"
@@ -341,18 +364,3 @@ function onRefresh(): void {
     </aside>
   </div>
 </template>
-
-<style scoped>
-@media (orientation: portrait) and (max-width: 1023px) {
-  .home-goals-column {
-    display: flex !important;
-    order: -1;
-  }
-
-  .home-side-column,
-  .home-calendar,
-  .home-feed-tabs {
-    display: none !important;
-  }
-}
-</style>
