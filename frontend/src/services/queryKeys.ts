@@ -211,6 +211,15 @@ export const queryKeys = {
     followersFeed: (userId: number, pageSize: number) =>
       ['activities', 'list', { scope: 'followers-feed', userId, pageSize }] as const,
     /**
+     * Activities overlapping one home-calendar window.
+     *
+     * @param startDate - Inclusive local `YYYY-MM-DD`.
+     * @param endDate - Inclusive local `YYYY-MM-DD`.
+     * @returns A list query key for that window.
+     */
+    calendar: (startDate: string, endDate: string) =>
+      ['activities', 'list', { scope: 'calendar', startDate, endDate }] as const,
+    /**
      * A user's per-sport aggregated stats for a timeframe (home dashboard).
      *
      * @param userId - The user whose stats to key.

@@ -70,6 +70,12 @@
     "snowshoeing": "Snowshoeing",
     "inline_skating": "Inline skating"
   },
+  "calendar": {
+    "label": "Activity calendar",
+    "previous": "Previous month",
+    "next": "Next month",
+    "openActivity": "Open {name}"
+  },
   "goals": {
     "title": "Goals",
     "empty": {

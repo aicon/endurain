@@ -11,6 +11,7 @@ import {
   type ActivityStatsTimeframe,
   fetchActivityStats,
   fetchFollowersActivities,
+  fetchOwnActivitiesBetween,
   fetchUserActivities,
   fetchUserThisMonthActivityCount,
   fetchUserWeekActivities,
@@ -114,6 +115,26 @@ export function useFollowersActivitiesFeed(
     initialPageParam: null as string | null,
     getNextPageParam: (lastSlice: ActivityFeedSlice) => lastSlice.nextCursor ?? undefined,
     enabled: computed(() => toValue(enabled) && isAuthenticated.value && id.value > 0),
+  })
+}
+
+/**
+ * The viewer's own activities for the home calendar's visible window, including
+ * the leading and trailing days of the neighbouring months.
+ *
+ * @param range - Reactive inclusive `YYYY-MM-DD` bounds.
+ * @returns The TanStack query result for that window.
+ */
+export function useMonthActivitiesQuery(range: MaybeRefOrGetter<{ start: string; end: string }>) {
+  const { isAuthenticated } = storeToRefs(useAuthStore())
+  const bounds = computed(() => toValue(range))
+
+  return useQuery<Activity[]>({
+    queryKey: computed(() => queryKeys.activities.calendar(bounds.value.start, bounds.value.end)),
+    queryFn: ({ signal }) =>
+      fetchOwnActivitiesBetween(bounds.value.start, bounds.value.end, signal),
+    enabled: computed(() => isAuthenticated.value && bounds.value.start !== ''),
+    staleTime: 60_000,
   })
 }
 

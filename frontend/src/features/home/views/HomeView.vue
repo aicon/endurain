@@ -4,6 +4,7 @@ import { useI18n } from 'vue-i18n'
 import { Activity as ActivityIcon, Plus, RefreshCw, Users as UsersIcon } from '@lucide/vue'
 import type { LucideIcon } from '@lucide/vue'
 
+import HomeActivityCalendar from '@/features/home/components/HomeActivityCalendar.vue'
 import HomeProfileCard from '@/features/home/components/HomeProfileCard.vue'
 import UserDistanceStats from '@/features/home/components/UserDistanceStats.vue'
 import UserGoalResults from '@/features/home/components/UserGoalResults.vue'
@@ -241,6 +242,8 @@ function onRefresh(): void {
           @change="onFileChange"
         />
       </Card>
+
+      <HomeActivityCalendar />
 
       <!-- Distance stats — hidden on small screens. -->
       <div class="hidden lg:block">

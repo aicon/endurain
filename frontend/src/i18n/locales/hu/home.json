@@ -70,6 +70,12 @@
     "snowshoeing": "Hótalpazás",
     "inline_skating": "Görkorcsolyázás"
   },
+  "calendar": {
+    "label": "Tevékenységnaptár",
+    "previous": "Előző hónap",
+    "next": "Következő hónap",
+    "openActivity": "{name} megnyitása"
+  },
   "goals": {
     "title": "Célok",
     "empty": {

@@ -518,6 +518,53 @@ export async function fetchUserActivitiesPage(
   return { records: (page_.items ?? []).map(mapActivity), total: page_.total }
 }
 
+/** Page size for a month calendar. The list endpoint caps a page at 200. */
+const CALENDAR_PAGE_SIZE = 200
+
+/**
+ * Loads every activity the viewer owns between two inclusive local dates.
+ *
+ * @param startDate - Inclusive `YYYY-MM-DD`.
+ * @param endDate - Inclusive `YYYY-MM-DD`.
+ * @param signal - Optional abort signal.
+ * @returns Activities in that window, oldest first.
+ */
+export async function fetchOwnActivitiesBetween(
+  startDate: string,
+  endDate: string,
+  signal?: AbortSignal,
+): Promise<Activity[]> {
+  const filters: ActivityListFilters = {
+    type: null,
+    startDate,
+    endDate,
+    nameSearch: null,
+  }
+  const activities: Activity[] = []
+  let page = 1
+  let total = 0
+  do {
+    const result = await fetchUserActivitiesPage(
+      {
+        userId: 0,
+        page,
+        numRecords: CALENDAR_PAGE_SIZE,
+        filters,
+        sortBy: 'start_time',
+        sortOrder: 'asc',
+      },
+      signal,
+    )
+    total = result.total
+    activities.push(...result.records)
+    page += 1
+    if (result.records.length === 0) {
+      break
+    }
+  } while (activities.length < total)
+  return activities
+}
+
 /**
  * Fetches the authenticated user's owned activity types as a `code → name` map.
  * The backend returns a `{ code: name }` object keyed by stringified codes; this
