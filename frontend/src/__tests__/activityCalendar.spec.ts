@@ -18,7 +18,7 @@ describe('monthGrid', () => {
     expect(cells[5]).toEqual({ date: '2026-11-06', day: 6, inMonth: true })
     expect(cells[29]).toEqual({ date: '2026-11-30', day: 30, inMonth: true })
     expect(cells[30]).toEqual({ date: '2026-12-01', day: 1, inMonth: false })
-    expect(cells.at(-1)?.date).toBe('2026-12-05')
+    expect(cells[cells.length - 1]?.date).toBe('2026-12-05')
   })
 
   it('prefixes the previous month when the first day is not Sunday', () => {

@@ -22,7 +22,7 @@ const cursor = ref({ year: today.getFullYear(), monthIndex: today.getMonth() })
 const days = computed(() => monthGrid(cursor.value.year, cursor.value.monthIndex))
 const range = computed(() => ({
   start: days.value[0]?.date ?? '',
-  end: days.value.at(-1)?.date ?? '',
+  end: days.value[days.value.length - 1]?.date ?? '',
 }))
 const activities = useMonthActivitiesQuery(range)
 
