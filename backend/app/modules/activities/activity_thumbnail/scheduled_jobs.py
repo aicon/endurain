@@ -15,6 +15,7 @@ def generate_missing_thumbnails() -> None:
     """
     platform = platform_runtime.get_active_platform()
     with core_database.SessionLocal() as db:
+        activity_thumbnail_service.refresh_endpoint_icons_if_needed(platform.storage, platform.lock, platform.clock, db)
         activity_thumbnail_service.generate_missing_activity_thumbnails(
             platform.storage, platform.lock, platform.clock, db
         )

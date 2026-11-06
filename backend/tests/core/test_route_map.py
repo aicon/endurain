@@ -4,7 +4,7 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 
-from core.route_map import RouteMapRenderRequest, UnsafeTileServerError, _GuardedStaticMap, render
+from core.route_map import RouteMapRenderRequest, UnsafeTileServerError, _endpoint_icon, _GuardedStaticMap, render
 
 
 def _request() -> RouteMapRenderRequest:
@@ -25,6 +25,23 @@ def _request() -> RouteMapRenderRequest:
         quality=75,
         encoder_method=6,
     )
+
+
+class TestEndpointIcon:
+    def test_start_is_a_green_play_button(self):
+        icon = _endpoint_icon("start", 22, "#639922")
+
+        assert icon.getpixel((0, 0))[3] == 0
+        assert icon.getpixel((11, 11))[:3] == (17, 17, 17)
+        assert icon.getpixel((6, 11))[:3] == (99, 153, 34)
+
+    def test_finish_is_a_checkered_disc(self):
+        icon = _endpoint_icon("finish", 22, "#639922")
+
+        assert icon.getpixel((0, 0))[3] == 0
+        opaque = [icon.getpixel((x, 11))[:3] for x in range(4, 18)]
+        assert (17, 17, 17) in opaque
+        assert (255, 255, 255) in opaque
 
 
 class TestRenderRouteMap:

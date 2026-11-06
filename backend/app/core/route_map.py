@@ -10,9 +10,11 @@ it enforces.
 
 from dataclasses import dataclass
 from io import BytesIO
+from math import cos, log, pi, tan
 from typing import Any
 from urllib.parse import urlparse, urlunparse
 
+from PIL import Image, ImageDraw
 from staticmap import CircleMarker, Line, StaticMap
 from urllib3 import HTTPConnectionPool, HTTPSConnectionPool
 
@@ -108,6 +110,65 @@ class _GuardedStaticMap(StaticMap):
         return _pinned_get(url, addresses[0], timeout=timeout, headers=headers)
 
 
+def _lon_to_tile_x(lon: float, zoom: int) -> float:
+    """Match staticmap's longitude-to-tile conversion."""
+    if not -180 <= lon <= 180:
+        lon = (lon + 180) % 360 - 180
+    return ((lon + 180.0) / 360) * pow(2, zoom)
+
+
+def _lat_to_tile_y(lat: float, zoom: int) -> float:
+    """Match staticmap's latitude-to-tile conversion."""
+    if not -90 <= lat <= 90:
+        lat = (lat + 90) % 180 - 90
+    return (1 - log(tan(lat * pi / 180) + 1 / cos(lat * pi / 180)) / pi) / 2 * pow(2, zoom)
+
+
+def _endpoint_icon(kind: str, diameter: int, start_color: str) -> Image.Image:
+    """Play button or checkered disc, transparent outside the circle."""
+    icon = Image.new("RGBA", (diameter, diameter), (0, 0, 0, 0))
+    draw = ImageDraw.Draw(icon)
+    box = (0, 0, diameter - 1, diameter - 1)
+    if kind == "start":
+        draw.ellipse(box, fill=start_color)
+        center_y = diameter / 2
+        left = diameter * 0.34
+        draw.polygon(
+            [(left, center_y - diameter * 0.24), (left, center_y + diameter * 0.24), (diameter * 0.72, center_y)],
+            fill="#111111",
+        )
+    else:
+        tile = max(2, diameter // 4)
+        for top in range(0, diameter, tile):
+            for left in range(0, diameter, tile):
+                dark = ((left // tile) + (top // tile)) % 2 == 0
+                draw.rectangle((left, top, left + tile, top + tile), fill="#111111" if dark else "#ffffff")
+        mask = Image.new("L", (diameter, diameter), 0)
+        ImageDraw.Draw(mask).ellipse(box, fill=255)
+        icon.putalpha(mask)
+        draw = ImageDraw.Draw(icon)
+    draw.ellipse(box, outline="#ffffff", width=max(1, diameter // 14))
+    return icon
+
+
+def _paint_endpoint(
+    image: Image.Image,
+    static_map: StaticMap,
+    coord: tuple[float, float],
+    kind: str,
+    start_color: str,
+    diameter: int,
+) -> None:
+    """Centre an endpoint icon on a route point of an already rendered map."""
+    if diameter < 2:
+        return
+    zoom = static_map.zoom
+    pixel_x = static_map._x_to_px(_lon_to_tile_x(coord[0], zoom))
+    pixel_y = static_map._y_to_px(_lat_to_tile_y(coord[1], zoom))
+    icon = _endpoint_icon(kind, diameter, start_color)
+    image.paste(icon, (pixel_x - diameter // 2, pixel_y - diameter // 2), icon)
+
+
 def render(request: RouteMapRenderRequest) -> bytes:
     """Render one route as WebP bytes.
 
@@ -134,14 +195,29 @@ def render(request: RouteMapRenderRequest) -> bytes:
         headers=request.headers,
     )
     static_map.add_line(Line(list(request.coordinates), request.line_color, request.line_width))
-    static_map.add_marker(CircleMarker(request.coordinates[0], request.marker_outer_color, request.marker_outer_radius))
-    static_map.add_marker(CircleMarker(request.coordinates[0], request.start_color, request.marker_inner_radius))
-    static_map.add_marker(
-        CircleMarker(request.coordinates[-1], request.marker_outer_color, request.marker_outer_radius)
-    )
-    static_map.add_marker(CircleMarker(request.coordinates[-1], request.end_color, request.marker_inner_radius))
+    # The white disc reserves the icon's extent. The play button and the
+    # checkered finish are painted on top, in the same place.
+    for coord in (request.coordinates[0], request.coordinates[-1]):
+        static_map.add_marker(CircleMarker(coord, request.marker_outer_color, request.marker_outer_radius))
 
     image = static_map.render()
+    if isinstance(image, Image.Image):
+        _paint_endpoint(
+            image,
+            static_map,
+            request.coordinates[0],
+            "start",
+            request.start_color,
+            request.marker_outer_radius,
+        )
+        _paint_endpoint(
+            image,
+            static_map,
+            request.coordinates[-1],
+            "finish",
+            request.start_color,
+            request.marker_outer_radius,
+        )
     buffer = BytesIO()
     image.save(buffer, "WEBP", quality=request.quality, method=request.encoder_method)
     return buffer.getvalue()

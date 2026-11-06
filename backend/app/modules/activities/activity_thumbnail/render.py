@@ -33,16 +33,15 @@ DEFAULT_TILE_URL = "https://tile.openstreetmap.org/{z}/{x}/{y}.png"
 DEFAULT_BG_COLOR = "#dddddd"
 
 # Visual constants mirroring the frontend Leaflet map (design tokens):
-# track = --color-brand, start marker = --color-goal, finish marker = --color-hr.
-# staticmap's CircleMarker has no stroke, so the white "border" the frontend gets
-# from Leaflet is drawn as a larger white circle behind the coloured dot.
+# track = --color-brand, start marker = --color-goal. The finish is a checkered
+# disc; the white circle only reserves its extent on the rendered image.
 _LINE_COLOR = "#1d9e75"  # --color-brand (brand teal)
 _LINE_WIDTH = 2  # integer pixels; another 25% off the previous 3
 _MARKER_OUTER_COLOR = "#ffffff"
-_MARKER_OUTER_RADIUS = 20
+_ICON_DIAMETER = 22
 _START_COLOR = "#639922"  # --color-goal (green)
-_END_COLOR = "#e24b4a"  # --color-hr (red)
-_MARKER_INNER_RADIUS = 13
+_END_COLOR = "#111111"
+_MARKER_INNER_RADIUS = _ICON_DIAMETER
 
 
 def _is_stadia_url(url: str) -> bool:
@@ -184,7 +183,7 @@ def render_activity_thumbnail(
                 line_color=_LINE_COLOR,
                 line_width=_LINE_WIDTH,
                 marker_outer_color=_MARKER_OUTER_COLOR,
-                marker_outer_radius=_MARKER_OUTER_RADIUS,
+                marker_outer_radius=_ICON_DIAMETER,
                 start_color=_START_COLOR,
                 end_color=_END_COLOR,
                 marker_inner_radius=_MARKER_INNER_RADIUS,

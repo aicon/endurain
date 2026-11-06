@@ -10,6 +10,7 @@ import {
   circleMarker,
   divIcon,
   map as createMap,
+  type Map,
   marker,
   polyline,
   tileLayer,
@@ -54,7 +55,11 @@ const TRACK_LINE_WEIGHT = 2.25
 const DEFAULT_TRACK_COLOR = themeColor('--color-brand')
 /** Start-marker fill — the `--color-goal` design token (green). */
 const START_MARKER_COLOR = themeColor('--color-goal')
-const ROUTE_PIN_PX = 22
+/** About the size of the hover dot, a couple of pixels larger than its black centre. */
+const ROUTE_PIN_PX = 18
+/** Above the marker pane (600), so the hover dot sits on the endpoints. */
+const CURSOR_PANE = 'routeCursor'
+const CURSOR_PANE_Z = '620'
 
 /**
  * Converts seam {@link GeoPoint}s to Leaflet `[lat, lng]` tuples.
@@ -102,6 +107,15 @@ export function boundsOf(track: MapTrack): [LatLngTuple, LatLngTuple] | null {
   ]
 }
 
+/** Puts the hover dot above the start and finish icons. */
+function ensureCursorPane(leafletMap: Map): void {
+  if (leafletMap.getPane(CURSOR_PANE)) {
+    return
+  }
+  const pane = leafletMap.createPane(CURSOR_PANE)
+  pane.style.zIndex = CURSOR_PANE_Z
+}
+
 /** Drops Leaflet's default white box around a div icon. */
 function ensureRoutePinStyle(): void {
   if (document.getElementById('endurain-route-pin-style')) {
@@ -137,8 +151,8 @@ function routePin(point: GeoPoint, html: string): Layer {
 function startMarker(point: GeoPoint): Layer {
   const html =
     `<div style="box-sizing:border-box;width:${ROUTE_PIN_PX}px;height:${ROUTE_PIN_PX}px;border-radius:50%;` +
-    `background:${START_MARKER_COLOR};border:1.5px solid #ffffff;display:flex;align-items:center;justify-content:center;">` +
-    `<div style="width:0;height:0;margin-left:2px;border-style:solid;border-width:6px 0 6px 9px;` +
+    `background:${START_MARKER_COLOR};border:1px solid #ffffff;display:flex;align-items:center;justify-content:center;">` +
+    `<div style="width:0;height:0;margin-left:1px;border-style:solid;border-width:4px 0 4px 6px;` +
     `border-color:transparent transparent transparent #111111;"></div></div>`
   return routePin(point, html)
 }
@@ -152,8 +166,8 @@ function startMarker(point: GeoPoint): Layer {
 function finishMarker(point: GeoPoint): Layer {
   const html =
     `<div style="box-sizing:border-box;width:${ROUTE_PIN_PX}px;height:${ROUTE_PIN_PX}px;border-radius:50%;` +
-    `border:1.5px solid #ffffff;box-shadow:inset 0 0 0 1px #222222;` +
-    `background:repeating-conic-gradient(#111111 0% 25%,#ffffff 0% 50%) 0 0/10px 10px;"></div>`
+    `border:1px solid #ffffff;box-shadow:inset 0 0 0 1px #222222;` +
+    `background:repeating-conic-gradient(#111111 0% 25%,#ffffff 0% 50%) 0 0/8px 8px;"></div>`
   return routePin(point, html)
 }
 
@@ -182,6 +196,7 @@ export function createLeafletMapProvider(config: LeafletMapProviderConfig = {}):
       })
 
       tileLayer(tileUrl, { attribution, maxZoom }).addTo(map)
+      ensureCursorPane(map)
 
       let overlays: Layer[] = []
       let currentTrack: MapTrack = options.track
@@ -262,6 +277,7 @@ export function createLeafletMapProvider(config: LeafletMapProviderConfig = {}):
               fillColor: '#2c2c2a',
               fillOpacity: 1,
               interactive: false,
+              pane: CURSOR_PANE,
             }).addTo(map)
           } else {
             cursor.setLatLng([point.lat, point.lng])

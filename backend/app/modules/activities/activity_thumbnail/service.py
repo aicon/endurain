@@ -43,6 +43,9 @@ THUMBNAIL_RETRY_DELAY = timedelta(hours=6)
 #: Lock shared by the backfill and the full regeneration, so only one of them
 #: touches the thumbnails at a time across replicas.
 _BACKFILL_LOCK_NAME = "thumbnail_backfill"
+#: Bumped when the drawn start/finish icons change, so stored thumbnails redraw once.
+_ENDPOINT_ICON_STYLE = b"play-checker-v1"
+_ENDPOINT_ICON_STYLE_KEY = "marker-style.txt"
 
 
 class _ActivityPageFetcher(Protocol):
@@ -366,6 +369,39 @@ def _delete_all_thumbnails(storage: platform_providers.StorageProvider, db: Sess
 
     logger.info("Thumbnail regeneration: deleted thumbnails", extra=core_logger.context(deleted=deleted))
     return True
+
+
+def refresh_endpoint_icons_if_needed(
+    storage: platform_providers.StorageProvider,
+    lock: platform_providers.LockProvider,
+    clock: platform_providers.ClockProvider,
+    db: Session,
+) -> None:
+    """Redraw every thumbnail once after the start and finish icons change.
+
+    The marker is a small file next to the thumbnails. When it already matches,
+    the pass does nothing. A regeneration that loses the lock leaves the marker
+    unset, so the next start tries again.
+
+    Args:
+        storage: The blob-storage provider.
+        lock: The coordination lock provider.
+        clock: The platform clock.
+        db: Database session.
+    """
+    if storage.get(activity_thumbnail_signing.THUMBNAIL_STORAGE_AREA, _ENDPOINT_ICON_STYLE_KEY) == _ENDPOINT_ICON_STYLE:
+        return
+    try:
+        delete_and_regenerate_all_activity_thumbnails(storage, lock, clock, db)
+    except core_exceptions.ConflictError:
+        logger.warning("Thumbnail endpoint icons: regeneration is already running")
+        return
+    storage.save(
+        activity_thumbnail_signing.THUMBNAIL_STORAGE_AREA,
+        _ENDPOINT_ICON_STYLE_KEY,
+        _ENDPOINT_ICON_STYLE,
+        "text/plain",
+    )
 
 
 def generate_missing_activity_thumbnails(

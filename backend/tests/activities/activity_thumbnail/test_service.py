@@ -256,6 +256,46 @@ class TestDeleteAndRegenerateThumbnails:
         mock_gen.assert_not_called()
 
 
+class TestRefreshEndpointIcons:
+    """Stored list maps are redrawn once when the start and finish icons change."""
+
+    @patch("modules.activities.activity_thumbnail.service.delete_and_regenerate_all_activity_thumbnails")
+    def test_skips_when_the_marker_already_matches(self, mock_regenerate):
+        from modules.activities.activity_thumbnail.service import (
+            _ENDPOINT_ICON_STYLE,
+            refresh_endpoint_icons_if_needed,
+        )
+
+        storage = MagicMock()
+        storage.get.return_value = _ENDPOINT_ICON_STYLE
+
+        refresh_endpoint_icons_if_needed(storage, MagicMock(), MagicMock(), MagicMock())
+
+        mock_regenerate.assert_not_called()
+        storage.save.assert_not_called()
+
+    @patch("modules.activities.activity_thumbnail.service.delete_and_regenerate_all_activity_thumbnails")
+    def test_redraws_and_records_the_marker_when_it_is_missing(self, mock_regenerate):
+        from modules.activities.activity_thumbnail.service import (
+            _ENDPOINT_ICON_STYLE,
+            refresh_endpoint_icons_if_needed,
+        )
+
+        storage = MagicMock()
+        storage.get.return_value = None
+        lock, clock, db = MagicMock(), MagicMock(), MagicMock()
+
+        refresh_endpoint_icons_if_needed(storage, lock, clock, db)
+
+        mock_regenerate.assert_called_once_with(storage, lock, clock, db)
+        storage.save.assert_called_once_with(
+            "activity_thumbnails",
+            "marker-style.txt",
+            _ENDPOINT_ICON_STYLE,
+            "text/plain",
+        )
+
+
 class TestGenerateMissingThumbnails:
     """generate_missing_activity_thumbnails: lock + storage-backed backfill."""
 

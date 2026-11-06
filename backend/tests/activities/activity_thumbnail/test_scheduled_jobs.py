@@ -18,6 +18,9 @@ class TestMaintenanceEntryPoints:
 
         generate_missing_thumbnails()
 
+        mock_service.refresh_endpoint_icons_if_needed.assert_called_once_with(
+            platform.storage, platform.lock, platform.clock, db
+        )
         mock_service.generate_missing_activity_thumbnails.assert_called_once_with(
             platform.storage, platform.lock, platform.clock, db
         )
