@@ -73,6 +73,7 @@ describe('buildActivityMetrics', () => {
     power: true,
     cadence: true,
     elevation: true,
+    location: true,
   }
 
   it('shows running pace, power, elevation, and heart rate when they are stored', () => {
@@ -85,6 +86,7 @@ describe('buildActivityMetrics', () => {
     expect(keys).toEqual([
       'distance',
       'time',
+      'elapsedTime',
       'pace',
       'avgPower',
       'elevationGain',
@@ -105,6 +107,7 @@ describe('buildActivityMetrics', () => {
     expect(keys).toEqual([
       'distance',
       'time',
+      'elapsedTime',
       'elevationGain',
       'avgPower',
       'avgSpeed',
@@ -121,6 +124,7 @@ describe('buildActivityMetrics', () => {
     expect(keys).toEqual([
       'distance',
       'time',
+      'elapsedTime',
       'pace',
       'avgHr',
       'maxHr',

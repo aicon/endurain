@@ -1293,6 +1293,91 @@ def get_activities_missing_location(
     return [activity_contracts.ActivityLocationRef(id=activity_id) for activity_id in ids]
 
 
+def update_activity_weather(activity_id: int, weather: dict, db: Session) -> bool:
+    """Stage Open-Meteo weather on an activity that has none yet.
+
+    Args:
+        activity_id: Target activity ID.
+        weather: Stored weather JSON.
+        db: Database session.
+
+    Returns:
+        True when the weather was written.
+    """
+    result = cast(
+        "CursorResult[Any]",
+        db.execute(
+            sa_update(activity_models.Activity)
+            .where(
+                activity_models.Activity.id == activity_id,
+                activity_models.Activity.weather.is_(None),
+            )
+            .values(weather=weather)
+        ),
+    )
+    db.flush()
+    return result.rowcount == 1
+
+
+def get_activities_missing_weather(
+    db: Session,
+    *,
+    due_at: datetime,
+    after_id: int = 0,
+    limit: int = core_pagination.DEFAULT_EXTERNAL_IO_BATCH_SIZE,
+) -> list[activity_contracts.ActivityWeatherRef]:
+    """Return activities whose weather is unset and due a lookup.
+
+    Args:
+        db: Database session.
+        due_at: Only rows due at or before this instant.
+        after_id: Return only activities with ``id`` greater than this.
+        limit: Maximum rows to return.
+
+    Returns:
+        Weather references ordered by id.
+    """
+    stmt = (
+        select(
+            activity_models.Activity.id,
+            activity_models.Activity.start_time,
+            activity_models.Activity.timezone,
+        )
+        .where(
+            activity_models.Activity.weather.is_(None),
+            or_(
+                activity_models.Activity.weather_next_lookup_at.is_(None),
+                activity_models.Activity.weather_next_lookup_at <= due_at,
+            ),
+            activity_models.Activity.id > after_id,
+        )
+        .order_by(activity_models.Activity.id)
+        .limit(limit)
+    )
+    return [
+        activity_contracts.ActivityWeatherRef(id=row.id, start_time=row.start_time, timezone=row.timezone)
+        for row in db.execute(stmt).all()
+    ]
+
+
+def defer_weather_lookups(activity_ids: Sequence[int], retry_at: datetime, db: Session) -> None:
+    """Stage the next weather lookup time for activities whose fetch failed.
+
+    Args:
+        activity_ids: Activities to defer.
+        retry_at: Earliest retry time.
+        db: Database session.
+    """
+    if not activity_ids:
+        return
+    db.execute(
+        sa_update(activity_models.Activity)
+        .where(activity_models.Activity.id.in_(activity_ids))
+        .values(weather_next_lookup_at=retry_at)
+    )
+    db.flush()
+
+
 def defer_location_lookups(activity_ids: Sequence[int], retry_at: datetime, db: Session) -> None:
     """Stage the next lookup time for activities whose location did not resolve.
 

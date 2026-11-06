@@ -17,6 +17,8 @@ import modules.activities.activity_file_storage.scheduled_jobs as activity_file_
 import modules.activities.activity_file_storage.subscriber_registry as activity_file_storage_subscriber_registry
 import modules.activities.activity_geocoding.scheduled_jobs as activity_geocoding_scheduled_jobs
 import modules.activities.activity_geocoding.subscriber_registry as activity_geocoding_subscriber_registry
+import modules.activities.activity_weather.scheduled_jobs as activity_weather_scheduled_jobs
+import modules.activities.activity_weather.subscriber_registry as activity_weather_subscriber_registry
 import modules.activities.activity_ingestion.scheduled_jobs as activity_ingestion_scheduled_jobs
 import modules.activities.activity_ingestion.subscriber_registry as activity_ingestion_subscriber_registry
 import modules.activities.activity_laps.integration_service as activity_laps_integration
@@ -161,6 +163,20 @@ MODULES: tuple[RuntimeModule, ...] = (
                 "backfill_missing_locations",
                 "Scheduling missing activity location backfill",
                 activity_geocoding_scheduled_jobs.schedule_missing_location_backfill,
+            ),
+        ),
+    ),
+    RuntimeModule(
+        name="activity_weather",
+        register_bus=activity_weather_subscriber_registry.register_bus_subscribers,
+        register_durable=activity_weather_subscriber_registry.register_durable_handlers,
+        nets=activity_weather_subscriber_registry.DURABLE_SUBSCRIBER_NETS,
+        recurring_jobs=activity_weather_scheduled_jobs.recurring_jobs,
+        startup_tasks=(
+            StartupTask(
+                "backfill_missing_weather",
+                "Scheduling missing activity weather backfill",
+                activity_weather_scheduled_jobs.schedule_missing_weather_backfill,
             ),
         ),
     ),

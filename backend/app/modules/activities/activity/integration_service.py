@@ -437,6 +437,65 @@ def defer_location_lookups(activity_ids: Sequence[int], retry_at: datetime, db: 
     activity_crud.defer_location_lookups(activity_ids, retry_at, db)
 
 
+def get_activity_by_id(activity_id: int, db: Session) -> activity_schema.ActivityRead | None:
+    """Return an activity by id with no permission check.
+
+    Args:
+        activity_id: Activity id.
+        db: Database session.
+
+    Returns:
+        The activity, or None.
+    """
+    return activity_crud.get_activity_by_id(activity_id, db)
+
+
+def list_activities_missing_weather(
+    db: Session,
+    *,
+    due_at: datetime,
+    after_id: int = 0,
+    limit: int = core_pagination.DEFAULT_EXTERNAL_IO_BATCH_SIZE,
+) -> list[activity_contracts.ActivityWeatherRef]:
+    """Return one page of activities whose weather is unset and due a lookup.
+
+    Args:
+        db: Database session.
+        due_at: Only activities due at or before this instant.
+        after_id: Return only activities with an id greater than this.
+        limit: Maximum rows to return.
+
+    Returns:
+        One page of weather backfill references.
+    """
+    return activity_crud.get_activities_missing_weather(db, due_at=due_at, after_id=after_id, limit=limit)
+
+
+def defer_weather_lookups(activity_ids: Sequence[int], retry_at: datetime, db: Session) -> None:
+    """Stage when activities whose weather fetch failed may be looked up again.
+
+    Args:
+        activity_ids: Activities to defer.
+        retry_at: Earliest retry time.
+        db: Database session.
+    """
+    activity_crud.defer_weather_lookups(activity_ids, retry_at, db)
+
+
+def set_activity_weather(activity_id: int, weather: dict, db: Session) -> bool:
+    """Stage Open-Meteo weather on an activity that has none yet.
+
+    Args:
+        activity_id: ID of the activity.
+        weather: Stored weather JSON.
+        db: Database session.
+
+    Returns:
+        True when the activity existed and was updated.
+    """
+    return activity_crud.update_activity_weather(activity_id, weather, db)
+
+
 def set_activity_location(
     activity_id: int,
     city: str | None,

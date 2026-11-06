@@ -24,6 +24,8 @@ import type {
   ActivityWorkoutSet,
   ActivityWorkoutStep,
   ActivityWorkoutStepDto,
+  ActivityWeather,
+  ActivityWeatherDto,
   HrZoneBucket,
   StreamWaypoint,
 } from '../types'
@@ -89,6 +91,19 @@ export async function fetchAllChildPages<T>(
  * @param dto - The activity wire payload.
  * @returns The activity domain model.
  */
+function mapWeather(dto: ActivityWeatherDto | null | undefined): ActivityWeather | null {
+  if (!dto || dto.unavailable || dto.temperature_c === null || dto.temperature_c === undefined) {
+    return null
+  }
+  return {
+    temperatureC: dto.temperature_c,
+    humidity: dto.humidity ?? null,
+    windKmh: dto.wind_kmh ?? null,
+    windDir: dto.wind_dir ?? null,
+    code: dto.code ?? null,
+  }
+}
+
 export function mapActivity(dto: ActivityDto): Activity {
   return {
     id: dto.id,
@@ -112,6 +127,7 @@ export function mapActivity(dto: ActivityDto): Activity {
     country: dto.country ?? null,
     trackerManufacturer: dto.tracker_manufacturer ?? null,
     trackerModel: dto.tracker_model ?? null,
+    weather: mapWeather(dto.weather),
 
     distance: dto.distance,
     pace: dto.pace ?? null,

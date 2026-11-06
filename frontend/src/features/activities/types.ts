@@ -7,6 +7,7 @@ import type { Schemas } from '@/types'
  * them into the camelCase domain models below.
  */
 export type ActivityDto = Schemas['ActivityRead']
+export type ActivityWeatherDto = Schemas['ActivityWeather']
 export type ActivityStreamDto = Schemas['ActivityStreamsRead']
 export type ActivityLapDto = Schemas['ActivityLapsRead']
 export type ActivityEditDto = Schemas['ActivityEdit']
@@ -182,6 +183,15 @@ export interface ActivityExerciseTitle {
  * Per-field privacy flags. For non-owners (and unauthenticated viewers) a `true`
  * flag hides the corresponding metric/section; owners always see everything.
  */
+/** Open-Meteo hour at the activity start (Dreeve-style meteo). */
+export interface ActivityWeather {
+  temperatureC: number | null
+  humidity: number | null
+  windKmh: number | null
+  windDir: string | null
+  code: number | null
+}
+
 export interface ActivityPrivacy {
   hideStartTime: boolean
   hideLocation: boolean
@@ -239,6 +249,8 @@ export interface Activity {
   /** Recording device, when the imported file named one. */
   trackerManufacturer: string | null
   trackerModel: string | null
+  /** Open-Meteo hour at the start, when GPS exists. */
+  weather: ActivityWeather | null
 
   /** Total distance in metres. */
   distance: number

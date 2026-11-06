@@ -98,6 +98,7 @@ class TestApplyVisibilityMask:
         schema.city = "City"
         schema.town = "Town"
         schema.country = "Country"
+        schema.weather = {"temperature_c": 12.0}
         schema.hide_gear = True
         schema.gear_id = 1
         schema.strava_gear_id = "g1"
@@ -111,6 +112,7 @@ class TestApplyVisibilityMask:
         assert result.city is None
         assert result.town is None
         assert result.country is None
+        assert result.weather is None
         assert result.gear_id is None
         assert result.strava_gear_id is None
         assert result.garminconnect_gear_id is None

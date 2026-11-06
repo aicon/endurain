@@ -305,6 +305,25 @@ export function temperatureToDisplay(celsius: number, units: Units): number {
   return units === 'imperial' ? celsiusToFahrenheit(celsius) : celsius
 }
 
+/** Formats air temperature for a metric pill. */
+export function formatAirTemperature(celsius: number, units: Units): FormattedMetric {
+  const display = temperatureToDisplay(celsius, units)
+  return {
+    value: display.toFixed(1).replace(/\.0$/, ''),
+    unit: units === 'imperial' ? '°F' : '°C',
+  }
+}
+
+const KMH_TO_MPH = 0.621371
+
+/** Formats wind speed for a metric pill. */
+export function formatWindSpeed(kmh: number, units: Units): FormattedMetric {
+  if (units === 'imperial') {
+    return { value: String(Math.round(kmh * KMH_TO_MPH)), unit: 'mph' }
+  }
+  return { value: String(Math.round(kmh)), unit: 'km/h' }
+}
+
 /**
  * Presents a cadence value. Running cadence is doubled to total steps per
  * minute (SPM); other sports keep the raw revolutions per minute (RPM),

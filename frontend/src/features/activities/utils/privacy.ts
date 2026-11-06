@@ -49,6 +49,7 @@ export function buildMetricVisibility(
     power: canViewField(activity, 'hidePower', currentUserId),
     cadence: canViewField(activity, 'hideCadence', currentUserId),
     elevation: canViewField(activity, 'hideElevation', currentUserId),
+    location: canViewField(activity, 'hideLocation', currentUserId),
   }
 }
 

@@ -191,6 +191,28 @@ class ActivityBase(BaseModel):
         return core_timezone.to_utc_aware(value) if isinstance(value, str) else value
 
 
+class ActivityWeather(BaseModel):
+    """Open-Meteo hour stored on an activity (Dreeve-style meteo).
+
+    Attributes:
+        temperature_c: Air temperature in Celsius.
+        humidity: Relative humidity percent.
+        wind_kmh: Wind speed in km/h.
+        wind_dir: Eight-point compass label (N, NE, …).
+        code: WMO weather code.
+        unavailable: True when there is no GPS hour to look up.
+    """
+
+    model_config = ConfigDict(extra="ignore")
+
+    temperature_c: float | None = None
+    humidity: int | None = None
+    wind_kmh: float | None = None
+    wind_dir: str | None = None
+    code: int | None = None
+    unavailable: bool = False
+
+
 class ActivityRead(ActivityBase):
     """Schema representing a stored fitness activity — what the API returns.
 
@@ -205,12 +227,14 @@ class ActivityRead(ActivityBase):
             only: it is excluded from serialization, so a client never receives it.
         map_thumbnail_url: The servable, token-gated URL of the thumbnail, set by
             the service layer for a viewer allowed to see the map.
+        weather: Open-Meteo hour at the start, when GPS exists.
     """
 
     id: int = Field(ge=1)
     map_thumbnail_path: str | None = Field(default=None, max_length=500, exclude=True)
     map_thumbnail_url: str | None = None
     version: int | None = Field(default=None, ge=1)
+    weather: ActivityWeather | None = None
 
 
 class ActivitySportStats(BaseModel):

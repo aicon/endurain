@@ -5407,6 +5407,27 @@ export interface components {
             url: string;
         };
         /**
+         * ActivityWeather
+         * @description Open-Meteo hour stored on an activity (Dreeve-style meteo).
+         */
+        ActivityWeather: {
+            /** Code */
+            code?: number | null;
+            /** Humidity */
+            humidity?: number | null;
+            /** Temperature C */
+            temperature_c?: number | null;
+            /**
+             * Unavailable
+             * @default false
+             */
+            unavailable: boolean;
+            /** Wind Dir */
+            wind_dir?: string | null;
+            /** Wind Kmh */
+            wind_kmh?: number | null;
+        };
+        /**
          * ActivityRead
          * @description Schema representing a stored fitness activity — what the API returns.
          *
@@ -5536,6 +5557,7 @@ export interface components {
             version?: number | null;
             /** Visibility */
             visibility?: number | null;
+            weather?: components["schemas"]["ActivityWeather"] | null;
             /** Workout Feeling */
             workout_feeling?: number | null;
             /** Workout Rpe */

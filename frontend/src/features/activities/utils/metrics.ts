@@ -13,11 +13,13 @@ import {
 } from './activityType'
 import {
   combineMetric,
+  formatAirTemperature,
   formatDistance,
   formatElevation,
   formatHmsDuration,
   formatPace,
   formatSpeed,
+  formatWindSpeed,
   type Units,
 } from './format'
 
@@ -29,6 +31,7 @@ export interface MetricVisibility {
   power: boolean
   cadence: boolean
   elevation: boolean
+  location: boolean
 }
 
 /** A single summary metric tile. */
@@ -48,6 +51,40 @@ export interface MetricTile {
 /** Whether a numeric metric is present and finite. */
 function has(value: number | null | undefined): value is number {
   return value !== null && value !== undefined && Number.isFinite(value)
+}
+
+/** i18n key for an Open-Meteo WMO weather code. */
+export function weatherConditionLabelKey(code: number | null): string {
+  if (code === null) {
+    return 'activities.metrics.weather'
+  }
+  if (code <= 1) {
+    return 'activities.metrics.weatherClear'
+  }
+  if (code <= 3) {
+    return 'activities.metrics.weatherCloudy'
+  }
+  if (code === 45 || code === 48) {
+    return 'activities.metrics.weatherFoggy'
+  }
+  if (code >= 51 && code <= 57) {
+    return 'activities.metrics.weatherDrizzle'
+  }
+  if (
+    (code >= 61 && code <= 67) ||
+    (code >= 80 && code <= 82) ||
+    code === 91 ||
+    code === 92
+  ) {
+    return 'activities.metrics.weatherRainy'
+  }
+  if ((code >= 71 && code <= 77) || (code >= 85 && code <= 86)) {
+    return 'activities.metrics.weatherSnowy'
+  }
+  if (code >= 95) {
+    return 'activities.metrics.weatherStormy'
+  }
+  return 'activities.metrics.weather'
 }
 
 /**
@@ -120,8 +157,41 @@ export function buildActivityMetrics(
       })
     }
   }
-  // Distance sessions show a distinct elapsed time on their pace/speed charts;
-  // non-distance sessions have no such chart, so it gets a tile of its own.
+  // Wall-clock elapsed time sits next to moving time when stops make it longer
+  // (same field Dreeve shows as elapsed). Pace/speed charts still add it too.
+  const pushWeather = (): void => {
+    const weather = activity.weather
+    if (!visibility.location || weather === null || !has(weather.temperatureC)) {
+      return
+    }
+    const temp = formatAirTemperature(weather.temperatureC, units)
+    tiles.push({
+      key: 'weather',
+      labelKey: weatherConditionLabelKey(weather.code),
+      value: temp.value,
+      unit: temp.unit,
+      accent: 'info',
+    })
+    if (has(weather.humidity)) {
+      tiles.push({
+        key: 'humidity',
+        labelKey: 'activities.metrics.humidity',
+        value: String(weather.humidity),
+        unit: '%',
+        accent: 'ink',
+      })
+    }
+    if (has(weather.windKmh)) {
+      const wind = formatWindSpeed(weather.windKmh, units)
+      tiles.push({
+        key: 'wind',
+        labelKey: 'activities.metrics.wind',
+        value: weather.windDir ? `${wind.value} ${weather.windDir}` : wind.value,
+        unit: wind.unit,
+        accent: 'ink',
+      })
+    }
+  }
   const pushElapsed = (): void => {
     const elapsed = distinctElapsedTime(activity)
     if (elapsed !== null) {
@@ -235,6 +305,7 @@ export function buildActivityMetrics(
     pushCalories()
     pushTime()
     pushElapsed()
+    pushWeather()
     pushAvgHr()
     return tiles
   }
@@ -250,6 +321,8 @@ export function buildActivityMetrics(
     accent: 'brand',
   })
   pushTime()
+  pushElapsed()
+  pushWeather()
 
   if (activityTypeIsCycling(type)) {
     // distance, time, elevation, power, speed, heart rate, calories

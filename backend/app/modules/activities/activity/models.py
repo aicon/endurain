@@ -78,6 +78,8 @@ class Activity(Base):
         dedup_key: Stable idempotency key (provider id now, content hash later) used to no-op re-imports.
         location_next_lookup_at: Earliest time the location backfill may look this activity up again.
         thumbnail_next_attempt_at: Earliest time the thumbnail backfill may try this activity again.
+        weather: Open-Meteo hour at the activity start, or an unavailable marker.
+        weather_next_lookup_at: Earliest time the weather backfill may look this activity up again.
     """
 
     __tablename__ = "activities"
@@ -378,4 +380,15 @@ class Activity(Base):
         DateTime(timezone=True),
         nullable=True,
         comment="Earliest time the thumbnail backfill retries an activity that has no thumbnail",
+    )
+    weather: Mapped[dict | None] = mapped_column(
+        JSON,
+        default=None,
+        nullable=True,
+        comment="Open-Meteo hour at the activity start (temperature, humidity, wind)",
+    )
+    weather_next_lookup_at: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True),
+        nullable=True,
+        comment="Earliest time the weather backfill retries an activity with no weather",
     )

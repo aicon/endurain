@@ -43,6 +43,15 @@ class ActivityThumbnailRef:
 
 
 @dataclass(frozen=True)
+class ActivityWeatherRef:
+    """Lightweight activity reference for the Open-Meteo weather backfill."""
+
+    id: int
+    start_time: datetime
+    timezone: str | None
+
+
+@dataclass(frozen=True)
 class ActivityLocationRef:
     """Lightweight activity reference for the reverse-geocoding backfill.
 

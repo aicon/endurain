@@ -15,6 +15,7 @@ const visible = {
   power: true,
   cadence: true,
   elevation: true,
+  location: true,
 }
 
 describe('activityDuration', () => {
@@ -104,7 +105,56 @@ describe('buildActivityMetrics elapsed tile', () => {
     expect(keysFor(19, 600).map((tile) => tile.key)).not.toContain('elapsedTime')
   })
 
-  it('keeps elapsed time off the summary for distance activities', () => {
-    expect(keysFor(1, 1200).map((tile) => tile.key)).not.toContain('elapsedTime')
+  it('adds elapsed time after the time tile for distance activities when it differs', () => {
+    const tiles = keysFor(1, 1200)
+    const keys = tiles.map((tile) => tile.key)
+    expect(keys.indexOf('elapsedTime')).toBe(keys.indexOf('time') + 1)
+    expect(tiles.find((tile) => tile.key === 'elapsedTime')?.value).toBe('20:00')
   })
+
+  it('omits elapsed time for distance activities when it matches the timer time', () => {
+    expect(keysFor(1, 600).map((tile) => tile.key)).not.toContain('elapsedTime')
+  })
+
+describe('buildActivityMetrics weather tiles', () => {
+  const weather = {
+    temperatureC: 8.4,
+    humidity: 81,
+    windKmh: 14.2,
+    windDir: 'NW',
+    code: 61,
+  }
+
+  it('adds weather, humidity and wind after elapsed time', () => {
+    const tiles = buildActivityMetrics(
+      makeActivity({
+        activityType: 11,
+        totalTimerTime: 600,
+        totalElapsedTime: 1200,
+        weather,
+      }),
+      'metric',
+      visible,
+    )
+    const keys = tiles.map((tile) => tile.key)
+    expect(keys.indexOf('weather')).toBe(keys.indexOf('elapsedTime') + 1)
+    expect(keys.indexOf('humidity')).toBe(keys.indexOf('weather') + 1)
+    expect(keys.indexOf('wind')).toBe(keys.indexOf('humidity') + 1)
+    expect(tiles.find((tile) => tile.key === 'weather')).toMatchObject({
+      labelKey: 'activities.metrics.weatherRainy',
+      value: '8.4',
+      unit: '°C',
+    })
+    expect(tiles.find((tile) => tile.key === 'wind')?.value).toBe('14 NW')
+  })
+
+  it('omits weather when location is hidden', () => {
+    const tiles = buildActivityMetrics(
+      makeActivity({ activityType: 11, weather }),
+      'metric',
+      { ...visible, location: false },
+    )
+    expect(tiles.map((tile) => tile.key)).not.toContain('weather')
+  })
+})
 })

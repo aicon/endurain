@@ -73,6 +73,7 @@ def apply_visibility_mask(
         schema.city = None
         schema.town = None
         schema.country = None
+        schema.weather = None
     if schema.hide_gear:
         schema.gear_id = None
         schema.strava_gear_id = None
