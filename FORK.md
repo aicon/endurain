@@ -48,7 +48,7 @@ Replay stays on this repository. Do not put this file or `.github/workflows/fork
 
 `ghcr.io/aicon/endurain:0.20.2-place`
 
-Same container layout as upstream v0.20.2, plus the summary-card, device, settlement, elevation-total, altitude-label, tooltip, header-gear, shared chart-cursor, elapsed-time, Open-Meteo weather, metric icons, and in-map replay changes above. Digest `sha256:24ceb54e468de09e8a14b86a2939a43208e3d81174c9a7c2df4a2952649b2f1f` (commit `0f3b79e`, 2026-11-06). Change the compose image tag from `0.20.1-place` to `0.20.2-place`.
+Same container layout as upstream v0.20.2, plus the summary-card, device, settlement, elevation-total, altitude-label, tooltip, header-gear, shared chart-cursor, elapsed-time, Open-Meteo weather, metric icons, Dreeve-style weather row, HR-first chart order, and in-map replay changes above. Digest `sha256:acce5e31aceb7591a2d0f6536870bc179adda7ab1a07f32566a29b52a3ffeafd` (commit `2bdd557`, 2026-11-06). Change the compose image tag from `0.20.1-place` to `0.20.2-place`.
 
 It does not replace `ghcr.io/endurain-project/endurain`. Drop this image when you move back to an official release.
 
