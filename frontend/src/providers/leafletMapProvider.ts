@@ -46,8 +46,8 @@ export interface LeafletMapProviderConfig {
 }
 
 const DEFAULT_MAX_ZOOM = 19
-/** Visible GPS polyline width. 3 is 25% thinner than the previous 4. */
-const TRACK_LINE_WEIGHT = 3
+/** Visible GPS polyline width. 2.25 is another 25% off the previous 3. */
+const TRACK_LINE_WEIGHT = 2.25
 /** Brand teal track colour, from the `--color-brand` design token. */
 const DEFAULT_TRACK_COLOR = themeColor('--color-brand')
 /** Start-marker fill — the `--color-goal` design token (green). */

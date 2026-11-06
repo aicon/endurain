@@ -198,7 +198,7 @@ function onRefresh(): void {
 <template>
   <div class="grid grid-cols-1 gap-3 lg:grid-cols-12">
     <!-- Left sidebar -->
-    <aside class="flex flex-col gap-3 lg:col-span-3">
+    <aside class="home-side-column flex flex-col gap-3 lg:col-span-3">
       <!-- Profile (photo + username) — hidden on small screens. -->
       <div class="hidden lg:block">
         <HomeProfileCard
@@ -243,8 +243,6 @@ function onRefresh(): void {
         />
       </Card>
 
-      <HomeActivityCalendar />
-
       <!-- Distance stats — hidden on small screens. -->
       <div class="hidden lg:block">
         <UserDistanceStats
@@ -258,20 +256,24 @@ function onRefresh(): void {
 
     <!-- Center feed -->
     <section class="flex flex-col gap-3 lg:col-span-6">
-      <!-- Scope toggle -->
-      <Tabs v-model="scopeModel">
-        <TabsList class="grid w-full grid-cols-2" :aria-label="t('home.feed.scopeLabel')">
-          <TabsTrigger
-            v-for="option in SCOPE_OPTIONS"
-            :key="option.value"
-            :value="option.value"
-            class="gap-1.5"
-          >
-            <component :is="option.icon" class="size-4" aria-hidden="true" />
-            {{ t(option.labelKey) }}
-          </TabsTrigger>
-        </TabsList>
-      </Tabs>
+      <HomeActivityCalendar class="home-calendar" />
+
+      <!-- Scope toggle. Hidden on a portrait phone. -->
+      <div class="home-feed-tabs">
+        <Tabs v-model="scopeModel">
+          <TabsList class="grid w-full grid-cols-2" :aria-label="t('home.feed.scopeLabel')">
+            <TabsTrigger
+              v-for="option in SCOPE_OPTIONS"
+              :key="option.value"
+              :value="option.value"
+              class="gap-1.5"
+            >
+              <component :is="option.icon" class="size-4" aria-hidden="true" />
+              {{ t(option.labelKey) }}
+            </TabsTrigger>
+          </TabsList>
+        </Tabs>
+      </div>
 
       <!-- Loading -->
       <div v-if="isPending" class="flex flex-col gap-3" aria-busy="true">
@@ -345,6 +347,12 @@ function onRefresh(): void {
   .home-goals-column {
     display: flex !important;
     order: -1;
+  }
+
+  .home-side-column,
+  .home-calendar,
+  .home-feed-tabs {
+    display: none !important;
   }
 }
 </style>

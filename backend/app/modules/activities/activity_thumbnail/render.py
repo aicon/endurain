@@ -37,7 +37,7 @@ DEFAULT_BG_COLOR = "#dddddd"
 # staticmap's CircleMarker has no stroke, so the white "border" the frontend gets
 # from Leaflet is drawn as a larger white circle behind the coloured dot.
 _LINE_COLOR = "#1d9e75"  # --color-brand (brand teal)
-_LINE_WIDTH = 3  # 25% thinner than the previous 4, matching the Leaflet track
+_LINE_WIDTH = 2  # integer pixels; another 25% off the previous 3
 _MARKER_OUTER_COLOR = "#ffffff"
 _MARKER_OUTER_RADIUS = 20
 _START_COLOR = "#639922"  # --color-goal (green)

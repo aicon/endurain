@@ -10,21 +10,28 @@ import {
 } from '@/features/home/utils/activityCalendar'
 
 describe('monthGrid', () => {
-  it('starts November 2026 on Sunday and fills the trailing week', () => {
+  it('starts November 2026 on Monday by default', () => {
     const cells = monthGrid(2026, 10)
+
+    expect(cells[0]).toEqual({ date: '2026-10-26', day: 26, inMonth: false })
+    expect(cells[6]).toEqual({ date: '2026-11-01', day: 1, inMonth: true })
+    expect(cells[cells.length - 1]?.date).toBe('2026-12-06')
+    expect(cells.length % 7).toBe(0)
+  })
+
+  it('starts November 2026 on Sunday when that is the profile week start', () => {
+    const cells = monthGrid(2026, 10, 'sunday')
 
     expect(cells).toHaveLength(35)
     expect(cells[0]).toEqual({ date: '2026-11-01', day: 1, inMonth: true })
     expect(cells[5]).toEqual({ date: '2026-11-06', day: 6, inMonth: true })
-    expect(cells[29]).toEqual({ date: '2026-11-30', day: 30, inMonth: true })
-    expect(cells[30]).toEqual({ date: '2026-12-01', day: 1, inMonth: false })
     expect(cells[cells.length - 1]?.date).toBe('2026-12-05')
   })
 
-  it('prefixes the previous month when the first day is not Sunday', () => {
+  it('prefixes the previous month when the first day is not the week start', () => {
     const cells = monthGrid(2026, 9)
 
-    expect(cells[0]).toEqual({ date: '2026-09-27', day: 27, inMonth: false })
+    expect(cells[0]).toEqual({ date: '2026-09-28', day: 28, inMonth: false })
     expect(cells.find((cell) => cell.inMonth)?.date).toBe('2026-10-01')
   })
 })

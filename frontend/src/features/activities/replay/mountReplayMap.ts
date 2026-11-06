@@ -335,7 +335,7 @@ export async function mountReplayMap(
           layout: { 'line-cap': 'round', 'line-join': 'round' },
           paint: {
             'line-color': '#ffffff',
-            'line-width': 1.5,
+            'line-width': 1.125,
             'line-opacity': 0.25,
           },
         },
@@ -346,7 +346,7 @@ export async function mountReplayMap(
           layout: { 'line-cap': 'round', 'line-join': 'round' },
           paint: {
             'line-color': ROUTE_GLOW,
-            'line-width': ['interpolate', ['linear'], ['zoom'], 14, 6, 17, 12],
+            'line-width': ['interpolate', ['linear'], ['zoom'], 14, 4.5, 17, 9],
             'line-blur': 5,
             'line-opacity': 0.5,
           },
@@ -358,7 +358,7 @@ export async function mountReplayMap(
           layout: { 'line-cap': 'round', 'line-join': 'round' },
           paint: {
             'line-color': ROUTE_CORE,
-            'line-width': 2.625,
+            'line-width': 1.97,
             'line-opacity': 0.95,
           },
         },

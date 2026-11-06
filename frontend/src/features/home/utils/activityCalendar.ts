@@ -1,6 +1,24 @@
 import { Mountain, type LucideIcon } from '@lucide/vue'
 
+import type { Schemas } from '@/types'
+
 import { activityTypeIcon } from '@/features/activities/utils/activityType'
+
+/** `Date.getUTCDay()` index for each profile week-start value. Sunday is 0. */
+const WEEK_START_INDEX: Record<Schemas['WeekDay'], number> = {
+  sunday: 0,
+  monday: 1,
+  tuesday: 2,
+  wednesday: 3,
+  thursday: 4,
+  friday: 5,
+  saturday: 6,
+}
+
+/** `Date.getUTCDay()` index for a profile week-start value. Sunday is 0. */
+export function weekStartIndex(weekStartsOn: Schemas['WeekDay']): number {
+  return WEEK_START_INDEX[weekStartsOn]
+}
 
 /** One cell in the month grid. Leading and trailing days belong to other months. */
 export interface CalendarDay {
@@ -71,20 +89,26 @@ function isoUtc(date: Date): string {
 }
 
 /**
- * Builds a Sunday-first month grid, including the neighbouring days that fill
- * the first and last weeks. Matches the FitTrackee calendar layout.
+ * Builds a month grid, including the neighbouring days that fill the first and
+ * last weeks. The first column follows the profile's first day of the week.
  *
  * @param year - Full year.
  * @param monthIndex - Month index, 0 = January.
+ * @param weekStartsOn - Profile first weekday. Defaults to Monday.
  * @returns The cells, always a multiple of 7.
  */
-export function monthGrid(year: number, monthIndex: number): CalendarDay[] {
+export function monthGrid(
+  year: number,
+  monthIndex: number,
+  weekStartsOn: Schemas['WeekDay'] = 'monday',
+): CalendarDay[] {
   const firstWeekday = new Date(Date.UTC(year, monthIndex, 1)).getUTCDay()
+  const offset = (firstWeekday - WEEK_START_INDEX[weekStartsOn] + 7) % 7
   const daysInMonth = new Date(Date.UTC(year, monthIndex + 1, 0)).getUTCDate()
   const daysInPrevious = new Date(Date.UTC(year, monthIndex, 0)).getUTCDate()
   const cells: CalendarDay[] = []
 
-  for (let index = firstWeekday; index > 0; index -= 1) {
+  for (let index = offset; index > 0; index -= 1) {
     const day = daysInPrevious - index + 1
     cells.push({
       date: isoUtc(new Date(Date.UTC(year, monthIndex - 1, day))),
