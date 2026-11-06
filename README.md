@@ -1,10 +1,25 @@
 > [!NOTE]
 > **This repository is an unofficial fork** of [endurain-project/endurain](https://github.com/endurain-project/endurain) at v0.20.2. It is **not** the official Endurain project and is **not endorsed** by the Endurain maintainers. What this fork adds is listed in [FORK.md](./FORK.md). Endurain® is a registered trademark of João Vitória Silva. See [`TRADEMARK.md`](./TRADEMARK.md).
->
-> Support for work on this fork goes to its author, not to the official project: [Ko-fi](https://ko-fi.com/aiconwg).
 
-> [!NOTE]
-> **Endurain is on a temporary feature freeze** - The project is not paused. The focus is shifting from new features to strengthening the foundations. More details [here](https://docs.endurain.com/blog/2026/05/23/pausing-new-features-so-endurain-can-keep-growing/)
+<div align="center">
+
+## If you like the new features and fixes in this fork, you can support my development work directly here: [Ko-fi](https://ko-fi.com/aiconwg). Thank you for keeping this version alive!
+
+<a href="https://ko-fi.com/aiconwg"><img height="56" src="https://storage.ko-fi.com/cdn/kofi2.png?v=6" alt="Ko-fi"></a>
+
+</div>
+
+---
+
+<div align="center">
+
+# Original description
+
+The text below is the original Endurain README.
+
+</div>
+
+---
 
 <div align="center">
   <img src="logo/brand_logo_dark_theme.png" width="128" height="128">

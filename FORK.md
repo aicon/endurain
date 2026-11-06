@@ -8,7 +8,7 @@ This is a **non-commercial fork** of [Endurain](https://github.com/endurain-proj
 - Docs for the original product: [docs.endurain.com](https://docs.endurain.com)
 - Trademark: [`TRADEMARK.md`](./TRADEMARK.md) (kept as the original author published it)
 
-The original README, contributing guide, license, and trademark policy stay in this tree so upstream expectations remain visible. The README and the docs homepage no longer list the upstream sponsors. Support for work on this fork is the author's Ko-fi, linked from the fork notice. This file is the only place that describes **fork-only** behaviour.
+The original README, contributing guide, license, and trademark policy stay in this tree so upstream expectations remain visible. The README opens with the fork notice and a Ko-fi line for the fork author, then a divider. Under that divider is the original description, without the upstream feature-freeze note and without the upstream sponsors. The docs homepage no longer lists those sponsors either. This file is the only place that describes **fork-only** behaviour.
 
 Local `master` tracks upstream `master` by rebase. The last sync was 2026-10-31. This fork is moving toward a long-lived independent repo, still based on Endurain, still crediting the original author.
 
