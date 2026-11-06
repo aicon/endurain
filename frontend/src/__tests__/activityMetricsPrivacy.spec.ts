@@ -155,7 +155,7 @@ describe('buildActivityMetrics', () => {
       visible,
     )
     const keys = tiles.map((tile) => tile.key)
-    expect(keys).toEqual(['calories', 'time', 'avgHr'])
+    expect(keys).toEqual(['calories', 'time', 'elapsedTime', 'avgHr'])
     expect(keys).not.toContain('distance')
   })
 

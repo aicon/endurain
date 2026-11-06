@@ -1,6 +1,17 @@
 <script setup lang="ts">
-import { computed } from 'vue'
+import { computed, type Component } from 'vue'
 import { useI18n } from 'vue-i18n'
+import {
+  Clock,
+  Flame,
+  Gauge,
+  Heart,
+  Mountain,
+  PersonStanding,
+  Route,
+  Timer,
+  Zap,
+} from '@lucide/vue'
 
 import type { Activity } from '@/features/activities/types'
 import type { Units } from '@/features/activities/utils/format'
@@ -18,6 +29,21 @@ const props = defineProps<{
 const { t } = useI18n()
 
 const tiles = computed(() => buildActivityMetrics(props.activity, props.units, props.visibility))
+
+const TILE_ICONS: Record<string, Component> = {
+  distance: Route,
+  time: Timer,
+  elapsedTime: Clock,
+  pace: Gauge,
+  avgSpeed: Gauge,
+  elevationGain: Mountain,
+  avgHr: Heart,
+  maxHr: Heart,
+  calories: Flame,
+  avgPower: Zap,
+  maxPower: Zap,
+  jumps: PersonStanding,
+}
 </script>
 
 <template>
@@ -29,7 +55,7 @@ const tiles = computed(() => buildActivityMetrics(props.activity, props.units, p
       :value="tile.value"
       :unit="tile.unit"
       :accent="tile.accent"
-      class=""
+      :icon="TILE_ICONS[tile.key]"
     />
   </div>
 </template>

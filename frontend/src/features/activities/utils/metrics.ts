@@ -1,6 +1,6 @@
 import type { MetricPillVariants } from '@/components/ui/metric-pill'
 
-import type { Activity } from '../types'
+import type { Activity, ActivityWeather } from '../types'
 import {
   activityTypeIsCycling,
   activityTypeIsDistanceBased,
@@ -87,6 +87,29 @@ export function weatherConditionLabelKey(code: number | null): string {
   return 'activities.metrics.weather'
 }
 
+/** One-line Open-Meteo summary for the activity header (Dreeve-style). */
+export function formatActivityWeather(
+  weather: ActivityWeather | null,
+  units: Units,
+): { conditionKey: string; detail: string } | null {
+  if (weather === null || !has(weather.temperatureC)) {
+    return null
+  }
+  const temp = formatAirTemperature(weather.temperatureC, units)
+  const parts = [`${temp.value} ${temp.unit}`]
+  if (has(weather.humidity)) {
+    parts.push(`${weather.humidity}%`)
+  }
+  if (has(weather.windKmh)) {
+    const wind = formatWindSpeed(weather.windKmh, units)
+    parts.push(weather.windDir ? `${wind.value} ${wind.unit} ${weather.windDir}` : `${wind.value} ${wind.unit}`)
+  }
+  return {
+    conditionKey: weatherConditionLabelKey(weather.code),
+    detail: parts.join(' · '),
+  }
+}
+
 /**
  * The activity's headline duration: moving (timer) time, matching the source app
  * and the activity list, or elapsed time when the timer time is missing or 0
@@ -157,52 +180,24 @@ export function buildActivityMetrics(
       })
     }
   }
-  // Wall-clock elapsed time sits next to moving time when stops make it longer
-  // (same field Dreeve shows as elapsed). Pace/speed charts still add it too.
-  const pushWeather = (): void => {
-    const weather = activity.weather
-    if (!visibility.location || weather === null || !has(weather.temperatureC)) {
+  // Wall-clock elapsed time sits next to moving time (Dreeve always shows both).
+  // Skip it only when the Time tile already fell back to elapsed.
+  const pushElapsed = (): void => {
+    const elapsed = activity.totalElapsedTime
+    const timer = activity.totalTimerTime
+    if (!has(elapsed) || elapsed <= 0) {
       return
     }
-    const temp = formatAirTemperature(weather.temperatureC, units)
+    if (!has(timer) || timer <= 0) {
+      return
+    }
     tiles.push({
-      key: 'weather',
-      labelKey: weatherConditionLabelKey(weather.code),
-      value: temp.value,
-      unit: temp.unit,
-      accent: 'info',
+      key: 'elapsedTime',
+      labelKey: 'activities.metrics.elapsedTime',
+      value: formatHmsDuration(elapsed),
+      unit: '',
+      accent: 'ink',
     })
-    if (has(weather.humidity)) {
-      tiles.push({
-        key: 'humidity',
-        labelKey: 'activities.metrics.humidity',
-        value: String(weather.humidity),
-        unit: '%',
-        accent: 'ink',
-      })
-    }
-    if (has(weather.windKmh)) {
-      const wind = formatWindSpeed(weather.windKmh, units)
-      tiles.push({
-        key: 'wind',
-        labelKey: 'activities.metrics.wind',
-        value: weather.windDir ? `${wind.value} ${weather.windDir}` : wind.value,
-        unit: wind.unit,
-        accent: 'ink',
-      })
-    }
-  }
-  const pushElapsed = (): void => {
-    const elapsed = distinctElapsedTime(activity)
-    if (elapsed !== null) {
-      tiles.push({
-        key: 'elapsedTime',
-        labelKey: 'activities.metrics.elapsedTime',
-        value: formatHmsDuration(elapsed),
-        unit: '',
-        accent: 'ink',
-      })
-    }
   }
   const pushCalories = (): void => {
     if (has(activity.calories)) {
@@ -305,7 +300,6 @@ export function buildActivityMetrics(
     pushCalories()
     pushTime()
     pushElapsed()
-    pushWeather()
     pushAvgHr()
     return tiles
   }
@@ -322,7 +316,6 @@ export function buildActivityMetrics(
   })
   pushTime()
   pushElapsed()
-  pushWeather()
 
   if (activityTypeIsCycling(type)) {
     // distance, time, elevation, power, speed, heart rate, calories

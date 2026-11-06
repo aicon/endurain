@@ -4,6 +4,7 @@ import {
   activityDuration,
   buildActivityMetrics,
   distinctElapsedTime,
+  formatActivityWeather,
 } from '@/features/activities/utils/metrics'
 
 import { makeActivity } from './fixtures/activity'
@@ -101,8 +102,10 @@ describe('buildActivityMetrics elapsed tile', () => {
     expect(tiles.find((tile) => tile.key === 'elapsedTime')?.value).toBe('20:00')
   })
 
-  it('omits elapsed time for non-distance sessions when it matches the timer time', () => {
-    expect(keysFor(19, 600).map((tile) => tile.key)).not.toContain('elapsedTime')
+  it('still shows elapsed time for non-distance sessions when it matches the timer time', () => {
+    const tiles = keysFor(19, 600)
+    expect(tiles.map((tile) => tile.key)).toEqual(['calories', 'time', 'elapsedTime', 'avgHr'])
+    expect(tiles.find((tile) => tile.key === 'elapsedTime')?.value).toBe('10:00')
   })
 
   it('adds elapsed time after the time tile for distance activities when it differs', () => {
@@ -112,49 +115,43 @@ describe('buildActivityMetrics elapsed tile', () => {
     expect(tiles.find((tile) => tile.key === 'elapsedTime')?.value).toBe('20:00')
   })
 
-  it('omits elapsed time for distance activities when it matches the timer time', () => {
-    expect(keysFor(1, 600).map((tile) => tile.key)).not.toContain('elapsedTime')
+  it('still shows elapsed time for distance activities when it matches the timer time', () => {
+    const tiles = keysFor(1, 600)
+    const keys = tiles.map((tile) => tile.key)
+    expect(keys.indexOf('elapsedTime')).toBe(keys.indexOf('time') + 1)
+    expect(tiles.find((tile) => tile.key === 'elapsedTime')?.value).toBe('10:00')
   })
 
-describe('buildActivityMetrics weather tiles', () => {
-  const weather = {
-    temperatureC: 8.4,
-    humidity: 81,
-    windKmh: 14.2,
-    windDir: 'NW',
-    code: 61,
-  }
-
-  it('adds weather, humidity and wind after elapsed time', () => {
+  it('omits elapsed time when the Time tile already shows elapsed (no timer time)', () => {
     const tiles = buildActivityMetrics(
-      makeActivity({
-        activityType: 11,
-        totalTimerTime: 600,
-        totalElapsedTime: 1200,
-        weather,
-      }),
+      makeActivity({ activityType: 1, totalTimerTime: 0, totalElapsedTime: 600 }),
       'metric',
       visible,
     )
-    const keys = tiles.map((tile) => tile.key)
-    expect(keys.indexOf('weather')).toBe(keys.indexOf('elapsedTime') + 1)
-    expect(keys.indexOf('humidity')).toBe(keys.indexOf('weather') + 1)
-    expect(keys.indexOf('wind')).toBe(keys.indexOf('humidity') + 1)
-    expect(tiles.find((tile) => tile.key === 'weather')).toMatchObject({
-      labelKey: 'activities.metrics.weatherRainy',
-      value: '8.4',
-      unit: '°C',
-    })
-    expect(tiles.find((tile) => tile.key === 'wind')?.value).toBe('14 NW')
-  })
-
-  it('omits weather when location is hidden', () => {
-    const tiles = buildActivityMetrics(
-      makeActivity({ activityType: 11, weather }),
-      'metric',
-      { ...visible, location: false },
-    )
-    expect(tiles.map((tile) => tile.key)).not.toContain('weather')
+    expect(tiles.map((tile) => tile.key)).not.toContain('elapsedTime')
   })
 })
+
+describe('formatActivityWeather', () => {
+  it('joins condition, temperature, humidity and wind', () => {
+    expect(
+      formatActivityWeather(
+        {
+          temperatureC: 8.4,
+          humidity: 81,
+          windKmh: 14.2,
+          windDir: 'NW',
+          code: 61,
+        },
+        'metric',
+      ),
+    ).toEqual({
+      conditionKey: 'activities.metrics.weatherRainy',
+      detail: '8.4 °C · 81% · 14 km/h NW',
+    })
+  })
+
+  it('returns null when temperature is missing', () => {
+    expect(formatActivityWeather(null, 'metric')).toBeNull()
+  })
 })

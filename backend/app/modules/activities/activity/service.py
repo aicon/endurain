@@ -577,6 +577,43 @@ def list_activity_types(user_id: int, db: Session) -> dict[int, str]:
     return activity_crud.get_distinct_activity_types_for_user(user_id, db)
 
 
+def _fill_weather_if_missing(
+    activity: activity_schema.ActivityRead,
+    db: Session,
+    *,
+    is_owner: bool,
+) -> activity_schema.ActivityRead:
+    """Fetch Open-Meteo weather on first detail read when import backfill missed it.
+
+    Args:
+        activity: The activity already loaded for the viewer.
+        db: Database session.
+        is_owner: Whether the viewer owns the activity.
+
+    Returns:
+        The same activity, or a reloaded copy with weather filled in.
+    """
+    if activity.weather is not None:
+        return activity
+    try:
+        import modules.activities.activity_weather.service as activity_weather_service
+
+        activity_weather_service.fetch_and_store_activity_weather(activity.id, db)
+    except Exception:
+        logger.debug(
+            "Open-Meteo weather lookup failed",
+            extra=core_logger.context(activity_id=activity.id),
+            exc_info=True,
+        )
+        return activity
+    filled = activity_crud.get_activity_by_id(activity.id, db)
+    if filled is None:
+        return activity
+    import modules.activities.activity.serializers as activity_serializers
+
+    return activity_serializers.apply_visibility_mask(filled, is_owner=is_owner)
+
+
 def get_activity(activity_id: int, requester_user_id: int, db: Session) -> activity_schema.ActivityRead:
     """Return an activity the requester owns or is permitted to see.
 
@@ -602,6 +639,9 @@ def get_activity(activity_id: int, requester_user_id: int, db: Session) -> activ
             extra=core_logger.context(activity_id=activity_id, requester_user_id=requester_user_id),
         )
         raise core_exceptions.NotFoundError(f"Activity {activity_id} not found")
+    activity = _fill_weather_if_missing(
+        activity, db, is_owner=activity.user_id == requester_user_id
+    )
     return _with_thumbnail_urls([activity])[0]
 
 
@@ -623,6 +663,7 @@ def get_public_activity(activity_id: int, db: Session) -> activity_schema.Activi
     activity = activity_crud.get_activity_by_id_if_is_public(activity_id, db)
     if activity is None:
         raise core_exceptions.NotFoundError("Activity not found")
+    activity = _fill_weather_if_missing(activity, db, is_owner=False)
     return _with_thumbnail_urls([activity])[0]
 
 

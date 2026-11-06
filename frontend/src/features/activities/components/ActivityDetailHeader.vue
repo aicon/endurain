@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { computed } from 'vue'
 import { useI18n } from 'vue-i18n'
-import { Globe, Lock, Users } from '@lucide/vue'
+import { CloudSun, Globe, Lock, Users } from '@lucide/vue'
 
 import type { Activity, ActivityOwner } from '@/features/activities/types'
 import type { Units } from '@/features/activities/utils/format'
@@ -17,6 +17,7 @@ import {
   activityTypeIsVirtual,
   presentActivityType,
 } from '@/features/activities/utils/activityType'
+import { formatActivityWeather } from '@/features/activities/utils/metrics'
 import { canViewField, isActivityOwner } from '@/features/activities/utils/privacy'
 import { formatZonedDateTime } from '@/utils/datetime'
 
@@ -59,6 +60,13 @@ const dateTimeLabel = computed(
       timeStyle: canSeeStartTime.value ? 'short' : undefined,
     }) || null,
 )
+
+const weatherLine = computed(() => {
+  if (!canSeeLocation.value) {
+    return null
+  }
+  return formatActivityWeather(props.activity.weather, props.units)
+})
 
 const locationLabel = computed(() => {
   if (!canSeeLocation.value) {
@@ -173,6 +181,14 @@ const showPrivateNotes = computed(
         </div>
       </div>
     </div>
+
+    <p
+      v-if="weatherLine"
+      class="text-hint flex items-center gap-1.5"
+    >
+      <CloudSun class="size-3.5 shrink-0 opacity-70" aria-hidden="true" />
+      <span>{{ t(weatherLine.conditionKey) }}, {{ weatherLine.detail }}</span>
+    </p>
 
     <h1 class="text-page-title">{{ activity.name }}</h1>
 

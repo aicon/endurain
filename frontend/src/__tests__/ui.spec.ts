@@ -62,6 +62,14 @@ describe('MetricPill', () => {
     expect(wrapper.text()).toContain('bpm')
     expect(wrapper.html()).toContain('text-hr')
   })
+
+  it('renders a leading icon before the label', () => {
+    const wrapper = mount(MetricPill, {
+      props: { label: 'Time', value: '1:00:00', icon: Bike },
+    })
+    expect(wrapper.find('svg').exists()).toBe(true)
+    expect(wrapper.text()).toContain('Time')
+  })
 })
 
 describe('ActivityTypeBadge', () => {
