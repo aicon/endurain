@@ -250,7 +250,7 @@ describe('RFC 9457 problem documents', () => {
 describe('apiDownload', () => {
   it('returns the blob and the UTF-8 Content-Disposition filename', async () => {
     fetchMock.mockResolvedValueOnce(
-      new Response(new Blob(['<gpx/>']), {
+      new Response('<gpx/>', {
         status: 200,
         headers: {
           'Content-Type': 'application/gpx+xml',
