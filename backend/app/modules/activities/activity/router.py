@@ -24,12 +24,15 @@ from fastapi import (
 )
 from sqlalchemy.orm import Session
 
+import jasil.providers as platform_providers
+
 import core.database as core_database
 import core.dependencies as core_dependencies
 import core.etag as core_etag
 import core.pagination as core_pagination
 import core.rate_limit as core_rate_limit
 import modules.activities.activity.dependencies as activity_dependencies
+import modules.activities.activity.download_service as activity_download_service
 import modules.activities.activity.schema as activity_schema
 import modules.activities.activity.service as activity_service
 import modules.auth.dependencies as auth_dependencies
@@ -214,6 +217,46 @@ def edit_activities(
     return activity_schema.VisibilityUpdateRead(
         detail=f"Visibility changed to {body.visibility} for all user activities",
         updated=updated,
+    )
+
+
+@router.get(
+    "/{activity_id}/file",
+    responses={
+        200: {
+            "content": {
+                "application/gpx+xml": {},
+                "application/vnd.garmin.tcx+xml": {},
+                "application/octet-stream": {},
+            }
+        }
+    },
+)
+def download_activity_file(
+    activity_id: activity_dependencies.ActivityId,
+    _check_scopes: Annotated[Callable, Security(auth_dependencies.check_scopes, scopes=["activities:read"])],
+    token_user_id: Annotated[int, Depends(auth_dependencies.get_sub_from_access_token)],
+    db: Annotated[Session, Depends(core_database.get_db)],
+    storage: Annotated[platform_providers.StorageProvider, Depends(core_dependencies.get_storage)],
+) -> Response:
+    """Download the activity as GPX, TCX or FIT for use in other apps.
+
+    Prefers the retained source file from import. When that file is gone, a GPX
+    1.1 track is rebuilt from stored streams. Only the owner may download.
+    """
+    data, filename, media_type = activity_download_service.download_activity_file(
+        activity_id,
+        token_user_id,
+        storage,
+        db,
+    )
+    return Response(
+        content=data,
+        media_type=media_type,
+        headers={
+            "Content-Disposition": activity_download_service.content_disposition(filename),
+            "Cache-Control": "private, no-store",
+        },
     )
 
 

@@ -2,7 +2,7 @@
 import { ref } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useRouter } from 'vue-router'
-import { EllipsisVertical, ImagePlus, Pencil, Trash2 } from '@lucide/vue'
+import { Download, EllipsisVertical, ImagePlus, Pencil, Trash2 } from '@lucide/vue'
 
 import type { Activity } from '@/features/activities/types'
 
@@ -17,6 +17,7 @@ import {
 import { useToasts } from '@/composables/useToasts'
 import {
   useDeleteActivityMutation,
+  useDownloadActivityMutation,
   useUploadActivityMediaMutation,
 } from '@/features/activities/composables/useActivityDetail'
 import ActivityEditDialog from '@/features/activities/components/ActivityEditDialog.vue'
@@ -31,10 +32,24 @@ const router = useRouter()
 const toasts = useToasts()
 
 const deleteMutation = useDeleteActivityMutation()
+const downloadMutation = useDownloadActivityMutation()
 const uploadMutation = useUploadActivityMediaMutation(() => props.activity.id)
 const isDeleteOpen = ref(false)
 const isEditOpen = ref(false)
 const fileInput = ref<HTMLInputElement | null>(null)
+
+/** Downloads the activity file (GPX/TCX/FIT) as an attachment. */
+async function downloadActivity(): Promise<void> {
+  try {
+    await downloadMutation.mutateAsync({
+      id: props.activity.id,
+      fallbackName: `${props.activity.name || 'activity'}.gpx`,
+    })
+    toasts.success(t('activities.actions.downloadSuccess'))
+  } catch {
+    toasts.error(t('activities.actions.downloadError'))
+  }
+}
 
 /** Opens the native file picker for the Add photo action. */
 function openFilePicker(): void {
@@ -86,6 +101,10 @@ async function confirmDelete(): Promise<void> {
       <DropdownMenuItem @select="openFilePicker">
         <ImagePlus class="size-4" />
         <span>{{ t('activities.media.addMedia') }}</span>
+      </DropdownMenuItem>
+      <DropdownMenuItem :disabled="downloadMutation.isPending.value" @select="downloadActivity">
+        <Download class="size-4" />
+        <span>{{ t('activities.actions.download') }}</span>
       </DropdownMenuItem>
       <DropdownMenuItem @select="isEditOpen = true">
         <Pencil class="size-4" />

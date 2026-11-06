@@ -22,6 +22,7 @@ import { fetchGearsByType } from '@/features/gears/services/gears'
 import { fetchActivityOwner } from '@/features/activities/services/activityOwner'
 import {
   deleteActivity,
+  downloadActivityFile,
   editActivity,
   fetchActivity,
   fetchActivityExerciseTitles,
@@ -271,6 +272,17 @@ export function useDisplayUnits(): ComputedRef<Units> {
       return currentUser.value?.units ?? 'metric'
     }
     return publicSettings.data.value?.units ?? 'metric'
+  })
+}
+
+/**
+ * Downloads the activity's portable GPS file (retained source, else rebuilt GPX).
+ *
+ * @returns The TanStack mutation for triggering the browser download.
+ */
+export function useDownloadActivityMutation() {
+  return useMutation<void, Error, { id: number; fallbackName?: string }>({
+    mutationFn: ({ id, fallbackName }) => downloadActivityFile(id, fallbackName),
   })
 }
 

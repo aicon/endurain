@@ -1,7 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
 import { clearAuthTokens, getAccessToken, getCsrfToken, setAuthTokens } from '@/services/authTokens'
-import { apiFetch, HttpError } from '@/services/http'
+import { apiDownload, apiFetch, HttpError } from '@/services/http'
 import { onSessionExpired } from '@/services/sessionExpiry'
 
 vi.mock('@/services/runtime', () => ({
@@ -244,5 +244,27 @@ describe('RFC 9457 problem documents', () => {
       type: null,
       requestId: null,
     })
+  })
+})
+
+describe('apiDownload', () => {
+  it('returns the blob and the UTF-8 Content-Disposition filename', async () => {
+    fetchMock.mockResolvedValueOnce(
+      new Response(new Blob(['<gpx/>']), {
+        status: 200,
+        headers: {
+          'Content-Type': 'application/gpx+xml',
+          'Content-Disposition':
+            'attachment; filename="walk.gpx"; filename*=UTF-8\'\'Afternoon_Walk.gpx',
+        },
+      }),
+    )
+
+    const result = await apiDownload('/activities/1/file')
+
+    expect(result.blob).toBeInstanceOf(Blob)
+    expect(result.blob.size).toBeGreaterThan(0)
+    expect(result.filename).toBe('Afternoon_Walk.gpx')
+    expect(fetchMock).toHaveBeenCalledWith('/activities/1/file', expect.anything())
   })
 })

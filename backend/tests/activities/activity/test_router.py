@@ -1,6 +1,6 @@
 from datetime import UTC, datetime
 from types import SimpleNamespace
-from unittest.mock import patch
+from unittest.mock import MagicMock, patch
 
 import pytest
 from fastapi import FastAPI, HTTPException
@@ -11,6 +11,7 @@ import core.exceptions as core_exceptions
 
 def _build_app(mock_db):
     import core.database as core_db
+    import core.dependencies as core_deps
     import modules.activities.activity.router as activity_router
     import modules.auth.dependencies as auth_deps
 
@@ -31,6 +32,7 @@ def _build_app(mock_db):
     ]:
         app.dependency_overrides[dep] = _mock
     app.dependency_overrides[core_db.get_db] = lambda: mock_db
+    app.dependency_overrides[core_deps.get_storage] = lambda: MagicMock()
     return app
 
 
@@ -506,3 +508,26 @@ class TestActivityConcurrency:
             )
 
         assert resp.status_code == 412
+
+
+class TestDownloadFile:
+    def test_returns_the_file_as_an_attachment(self, mock_db):
+        with patch(
+            "modules.activities.activity.router.activity_download_service.download_activity_file",
+            return_value=(b"<gpx/>", "Afternoon_Walk.gpx", "application/gpx+xml"),
+        ):
+            resp = TestClient(_build_app(mock_db)).get("/activities/1/file", headers={"Authorization": "Bearer x"})
+
+        assert resp.status_code == 200
+        assert resp.content == b"<gpx/>"
+        assert resp.headers["content-type"].startswith("application/gpx+xml")
+        assert "Afternoon_Walk.gpx" in resp.headers["content-disposition"]
+
+    def test_missing_file_is_not_found(self, mock_db):
+        with patch(
+            "modules.activities.activity.router.activity_download_service.download_activity_file",
+            side_effect=core_exceptions.NotFoundError("Activity file not found"),
+        ):
+            resp = TestClient(_build_app(mock_db)).get("/activities/1/file", headers={"Authorization": "Bearer x"})
+
+        assert resp.status_code == 404

@@ -243,6 +243,80 @@ async function rawApiFetch<T>(path: string, init: ApiFetchOptions = {}): Promise
   }
 }
 
+/** Reads a Content-Disposition attachment filename, if present. */
+function filenameFromDisposition(header: string | null): string | null {
+  if (!header) {
+    return null
+  }
+  const utf = /filename\*=UTF-8''([^;]+)/i.exec(header)
+  if (utf?.[1]) {
+    try {
+      return decodeURIComponent(utf[1])
+    } catch {
+      return utf[1]
+    }
+  }
+  const quoted = /filename="([^"]+)"/i.exec(header)
+  return quoted?.[1] ?? null
+}
+
+/**
+ * Downloads a binary API resource (activity file, profile export) with auth.
+ *
+ * @param path - Path relative to {@link API_BASE_URL}.
+ * @param init - Fetch options; `responseType` is ignored.
+ * @returns The blob and the server-suggested filename, when provided.
+ */
+export async function apiDownload(
+  path: string,
+  init: ApiFetchOptions = {},
+): Promise<{ blob: Blob; filename: string | null }> {
+  const run = async (): Promise<{ blob: Blob; filename: string | null }> => {
+    const headers = buildHeaders({
+      ...init,
+      headers: {
+        Accept: '*/*',
+        ...Object.fromEntries(new Headers(init.headers)),
+      },
+    })
+    const response = await fetch(`${API_BASE_URL}${path}`, {
+      ...init,
+      credentials: 'include',
+      headers,
+      signal: buildSignal(init),
+    })
+    if (!response.ok) {
+      const parsed = await parseError(response)
+      throw new HttpError(
+        response.status,
+        response.statusText,
+        parsed.detail,
+        parsed.type,
+        parsed.requestId,
+      )
+    }
+    return {
+      blob: await response.blob(),
+      filename: filenameFromDisposition(response.headers.get('Content-Disposition')),
+    }
+  }
+
+  try {
+    return await run()
+  } catch (error) {
+    const shouldRetry =
+      error instanceof HttpError &&
+      error.status === 401 &&
+      init.auth !== false &&
+      init.retryOnUnauthorized !== false
+    if (!shouldRetry) {
+      throw error
+    }
+    await refreshAuthTokens()
+    return run()
+  }
+}
+
 /**
  * Performs a JSON request against the API.
  *

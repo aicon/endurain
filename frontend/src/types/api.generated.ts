@@ -381,6 +381,29 @@ export interface paths {
         patch: operations["edit_activity_api_v1_activities__activity_id__patch"];
         trace?: never;
     };
+    "/api/v1/activities/{activity_id}/file": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Download Activity File
+         * @description Download the activity as GPX, TCX or FIT for use in other apps.
+         *
+         *     Prefers the retained source file from import. When that file is gone, a GPX
+         *     1.1 track is rebuilt from stored streams. Only the owner may download.
+         */
+        get: operations["download_activity_file_api_v1_activities__activity_id__file_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/activities/{activity_id}/laps": {
         parameters: {
             query?: never;
@@ -12750,6 +12773,49 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["ActivityRead"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetail"];
+                };
+            };
+            /** @description Unexpected error */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetail"];
+                };
+            };
+        };
+    };
+    download_activity_file_api_v1_activities__activity_id__file_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                activity_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/gpx+xml": unknown;
+                    "application/json": unknown;
+                    "application/octet-stream": unknown;
+                    "application/vnd.garmin.tcx+xml": unknown;
                 };
             };
             /** @description Validation Error */

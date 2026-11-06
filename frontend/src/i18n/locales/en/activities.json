@@ -181,6 +181,9 @@
   },
   "actions": {
     "menu": "Activity actions",
+    "download": "Download activity",
+    "downloadSuccess": "Activity downloaded",
+    "downloadError": "Couldn't download the activity",
     "delete": "Delete activity",
     "edit": "Edit activity",
     "deleteTitle": "Delete activity",

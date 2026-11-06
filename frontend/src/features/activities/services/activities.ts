@@ -1,6 +1,6 @@
 import type { Schemas } from '@/types'
 
-import { apiFetch, HttpError } from '@/services/http'
+import { apiDownload, apiFetch, HttpError } from '@/services/http'
 import { todayIsoDate } from '@/utils/datetime'
 
 /** Job handle returned by the refresh endpoint; polled via `fetchIngestionJob`. */
@@ -905,4 +905,29 @@ export async function editActivity(
     headers: ifMatchHeaders(version),
   })
   return mapActivity(dto)
+}
+
+/**
+ * Downloads the activity's retained GPX/TCX/FIT, or a GPX rebuilt from streams.
+ *
+ * @param id - Activity id.
+ * @param fallbackName - Filename used when the server omits Content-Disposition.
+ */
+export async function downloadActivityFile(
+  id: number,
+  fallbackName = 'activity.gpx',
+): Promise<void> {
+  const { blob, filename } = await apiDownload(`/activities/${id}/file`)
+  const url = URL.createObjectURL(blob)
+  try {
+    const link = document.createElement('a')
+    link.href = url
+    link.download = filename ?? fallbackName
+    link.rel = 'noopener'
+    document.body.appendChild(link)
+    link.click()
+    link.remove()
+  } finally {
+    URL.revokeObjectURL(url)
+  }
 }

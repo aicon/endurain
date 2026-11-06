@@ -181,6 +181,9 @@
   },
   "actions": {
     "menu": "Tevékenység műveletei",
+    "download": "Tevékenység letöltése",
+    "downloadSuccess": "Tevékenység letöltve",
+    "downloadError": "Nem sikerült letölteni a tevékenységet",
     "delete": "Tevékenység törlése",
     "edit": "Tevékenység szerkesztése",
     "deleteTitle": "Tevékenység törlése",

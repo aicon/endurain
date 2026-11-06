@@ -2,9 +2,10 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
 
 import type { ActivityDto, ActivityLapDto, ActivityStreamDto } from '@/features/activities/types'
 
-import { apiFetch } from '@/services/http'
+import { apiDownload, apiFetch } from '@/services/http'
 import {
   deleteActivity,
+  downloadActivityFile,
   editActivity,
   fetchActivity,
   fetchActivityLaps,
@@ -33,7 +34,11 @@ vi.mock('@/services/http', () => {
       this.name = 'HttpError'
     }
   }
-  return { apiFetch: vi.fn<typeof apiFetch>(), HttpError }
+  return {
+    apiFetch: vi.fn<typeof apiFetch>(),
+    apiDownload: vi.fn<typeof apiDownload>(),
+    HttpError,
+  }
 })
 
 const activityDto: ActivityDto = {
@@ -663,5 +668,32 @@ describe('conditional activity writes', () => {
 
   it('maps the version off the wire so it can be echoed back', async () => {
     expect(mapActivity({ ...activityDto, version: 9 }).version).toBe(9)
+  })
+})
+
+describe('downloadActivityFile', () => {
+  it('saves the blob under the server filename', async () => {
+    const blob = new Blob(['<gpx/>'])
+    vi.mocked(apiDownload).mockResolvedValueOnce({ blob, filename: 'Afternoon_Walk.gpx' })
+    const createObjectURL = vi.fn<() => string>(() => 'blob:activity')
+    const revokeObjectURL = vi.fn<(url: string) => void>()
+    vi.stubGlobal('URL', { createObjectURL, revokeObjectURL })
+
+    const click = vi.fn<() => void>()
+    const link = { href: '', download: '', rel: '', click, remove: vi.fn<() => void>() }
+    const createEl = vi
+      .spyOn(document, 'createElement')
+      .mockReturnValue(link as unknown as HTMLAnchorElement)
+    const append = vi.spyOn(document.body, 'appendChild').mockImplementation((node) => node)
+
+    await downloadActivityFile(5, 'fallback.gpx')
+
+    expect(apiDownload).toHaveBeenCalledWith('/activities/5/file')
+    expect(link.download).toBe('Afternoon_Walk.gpx')
+    expect(click).toHaveBeenCalled()
+    expect(revokeObjectURL).toHaveBeenCalledWith('blob:activity')
+    createEl.mockRestore()
+    append.mockRestore()
+    vi.unstubAllGlobals()
   })
 })

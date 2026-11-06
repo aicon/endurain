@@ -9,8 +9,8 @@ the API node's filesystem.
 
 The database stores no key for these files: the key is derived from the activity
 id plus one of the known source extensions, so reads/deletes probe those
-extensions rather than reading a column. There is no servable URL — the retained
-file is only consumed in-process (profile export) and on cleanup, never served.
+extensions rather than reading a column. The owner download endpoint and the
+profile export read the same keys.
 """
 
 import jasil.providers as platform_providers
