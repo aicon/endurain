@@ -38,7 +38,11 @@ import {
 } from '@/features/activities/utils/privacy'
 import { extractHrZones } from '@/features/activities/utils/hrZones'
 import { pointAtFraction } from '@/features/activities/utils/scrub'
-import { buildStreamCharts, extractTrack, layoutActivityChartPanels } from '@/features/activities/utils/streams'
+import {
+  buildStreamCharts,
+  extractTrack,
+  layoutActivityChartPanels,
+} from '@/features/activities/utils/streams'
 
 const route = useRoute()
 const { t } = useI18n()

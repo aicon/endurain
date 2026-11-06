@@ -26,12 +26,7 @@ const props = defineProps<Props>()
 <template>
   <div data-slot="metric-pill" :class="cn('min-w-[100px] rounded-input', props.class)">
     <p class="mb-1 flex items-center gap-1.5 text-caption">
-      <component
-        :is="icon"
-        v-if="icon"
-        class="size-3.5 shrink-0 opacity-70"
-        aria-hidden="true"
-      />
+      <component :is="icon" v-if="icon" class="size-3.5 shrink-0 opacity-70" aria-hidden="true" />
       <span>{{ label }}</span>
     </p>
     <p :class="metricPillValueVariants({ accent })">

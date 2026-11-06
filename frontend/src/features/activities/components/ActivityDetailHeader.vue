@@ -175,11 +175,7 @@ const showPrivateNotes = computed(
       </div>
     </div>
 
-    <ActivityWeatherRow
-      v-if="canSeeLocation"
-      :weather="activity.weather"
-      :units="units"
-    />
+    <ActivityWeatherRow v-if="canSeeLocation" :weather="activity.weather" :units="units" />
 
     <h1 class="text-page-title">{{ activity.name }}</h1>
 

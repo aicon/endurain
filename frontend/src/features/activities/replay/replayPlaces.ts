@@ -240,7 +240,8 @@ export function pickVisiblePlace(
   places: readonly ReplayPlace[],
   current: ReplayPlace | null,
 ): ReplayPlace | null {
-  const poleOf = (place: ReplayPlace): GeoPoint => place.anchor ?? { lat: place.lat, lng: place.lng }
+  const poleOf = (place: ReplayPlace): GeoPoint =>
+    place.anchor ?? { lat: place.lat, lng: place.lng }
   const distTo = (place: ReplayPlace): number => metersBetween(here, poleOf(place))
   if (current) {
     const held = places.find((place) => place.id === current.id) ?? current
@@ -268,7 +269,11 @@ export function pickVisiblePlace(
  *
  * @param place - Town or peak.
  */
-export function placeCaption(place: ReplayPlace): { icon: string; title: string; subtitle: string } {
+export function placeCaption(place: ReplayPlace): {
+  icon: string
+  title: string
+  subtitle: string
+} {
   if (place.kind === 'peak') {
     const rounded = place.ele !== undefined ? Math.round(place.ele) : undefined
     return {

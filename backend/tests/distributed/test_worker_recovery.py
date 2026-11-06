@@ -6,7 +6,7 @@ keeps it however long the handler runs. Both are about the whole deployment, so
 both need real processes and a real clock: the lease is 60 seconds.
 """
 
-from tests.distributed.cluster import LEASE_SECONDS
+from tests.distributed.cluster import ACTIVITY_CREATED_JOB_SUBSCRIBERS, LEASE_SECONDS
 
 _UPLOAD_SUBSCRIBER = "activity_ingestion.uploaded_file"
 
@@ -42,7 +42,9 @@ def test_a_job_whose_worker_is_killed_is_finished_by_another_worker(cluster):
     assert [outcome for outcome, _worker in attempts] == ["lease_expired", "completed"]
     assert len({worker for _outcome, worker in attempts}) == 2, "the survivor, not the dead worker, finished it"
     assert cluster.scalar("SELECT count(*) FROM activities") == 1, "the import ran once, not twice"
-    assert cluster.wait_for_durable_jobs(4), "the upload job and its three activity.created subscribers completed"
+    assert cluster.wait_for_durable_jobs(1 + len(ACTIVITY_CREATED_JOB_SUBSCRIBERS)), (
+        "the upload job and its activity.created subscribers completed"
+    )
 
 
 def test_a_handler_that_outlives_its_lease_is_not_taken_over(cluster):

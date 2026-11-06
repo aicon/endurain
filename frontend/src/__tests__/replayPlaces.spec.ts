@@ -102,10 +102,7 @@ describe('snapPlacesToRoute', () => {
       { lat: 47.9, lng: 20.37 },
       { lat: 47.91, lng: 20.38 },
     ]
-    const [snapped] = snapPlacesToRoute(
-      [{ ...town, lat: 47.9004, lng: 20.3704 }],
-      route,
-    )
+    const [snapped] = snapPlacesToRoute([{ ...town, lat: 47.9004, lng: 20.3704 }], route)
     expect(snapped?.anchor).toEqual(route[0])
   })
 })

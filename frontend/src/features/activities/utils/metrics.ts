@@ -70,12 +70,7 @@ export function weatherConditionLabelKey(code: number | null): string {
   if (code >= 51 && code <= 57) {
     return 'activities.metrics.weatherDrizzle'
   }
-  if (
-    (code >= 61 && code <= 67) ||
-    (code >= 80 && code <= 82) ||
-    code === 91 ||
-    code === 92
-  ) {
+  if ((code >= 61 && code <= 67) || (code >= 80 && code <= 82) || code === 91 || code === 92) {
     return 'activities.metrics.weatherRainy'
   }
   if ((code >= 71 && code <= 77) || (code >= 85 && code <= 86)) {
@@ -89,14 +84,7 @@ export function weatherConditionLabelKey(code: number | null): string {
 
 /** Visual kind for the coloured weather icon. */
 export type WeatherConditionKind =
-  | 'clear'
-  | 'cloudy'
-  | 'foggy'
-  | 'drizzle'
-  | 'rainy'
-  | 'snowy'
-  | 'stormy'
-  | 'weather'
+  'clear' | 'cloudy' | 'foggy' | 'drizzle' | 'rainy' | 'snowy' | 'stormy' | 'weather'
 
 const WIND_DIRS = new Set(['N', 'NE', 'E', 'SE', 'S', 'SW', 'W', 'NW'])
 

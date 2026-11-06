@@ -225,11 +225,7 @@ describe('layoutActivityChartPanels', () => {
 
   it('orders HR, elevation, zones, then remaining metrics', () => {
     const charts = buildStreamCharts(
-      [
-        stream(1, [{ hr: 120 }]),
-        stream(4, [{ ele: 10 }]),
-        stream(6, [{ pace: 0.3 }]),
-      ],
+      [stream(1, [{ hr: 120 }]), stream(4, [{ ele: 10 }]), stream(6, [{ pace: 0.3 }])],
       makeActivity({ activityType: 1 }),
       'metric',
       () => true,

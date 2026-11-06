@@ -7,11 +7,9 @@ subscribers. Nothing here is mocked: the processes only share PostgreSQL, Redis 
 storage.
 """
 
-_DERIVED_SUBSCRIBERS = {
-    "activity_geocoding.reverse_geocode",
-    "activity.notify_created",
-    "activity_thumbnail.generate",
-}
+from tests.distributed.cluster import ACTIVITY_CREATED_JOB_SUBSCRIBERS
+
+_DERIVED_SUBSCRIBERS = ACTIVITY_CREATED_JOB_SUBSCRIBERS
 
 
 def _assert_everything_completed_exactly_once(cluster, job_ids, *, workers: int) -> None:

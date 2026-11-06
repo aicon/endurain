@@ -25,6 +25,16 @@ _SUPPORT_DIR = Path(__file__).resolve().parent / "support"
 #: ``lease_seconds >= 3 * heartbeat_interval_seconds`` rule (15 s heartbeat).
 LEASE_SECONDS = 60
 
+#: Durable ``activity.created`` subscribers that run after a successful import.
+ACTIVITY_CREATED_JOB_SUBSCRIBERS = frozenset(
+    {
+        "activity_geocoding.reverse_geocode",
+        "activity.notify_created",
+        "activity_thumbnail.generate",
+        "activity_weather.open_meteo",
+    }
+)
+
 _STARTUP_MARKER = "Application startup complete"
 
 

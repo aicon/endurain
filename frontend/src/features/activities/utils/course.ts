@@ -319,8 +319,10 @@ export function courseBearing(
  * @param points - Ordered route.
  */
 export function cumulativeDistances(points: readonly GeoPoint[]): number[] {
-  const distances = new Array<number>(points.length)
-  distances[0] = 0
+  if (points.length === 0) {
+    return []
+  }
+  const distances = Array.from({ length: points.length }, () => 0)
   for (let index = 1; index < points.length; index += 1) {
     const prev = points[index - 1]
     const here = points[index]

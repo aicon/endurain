@@ -91,7 +91,10 @@ const windLabel = computed(() => {
         :class="conditionClass"
         aria-hidden="true"
       />
-      <span>{{ t(parts.conditionKey) }}, {{ parts.temperature.value }} {{ parts.temperature.unit }}</span>
+      <span
+        >{{ t(parts.conditionKey) }}, {{ parts.temperature.value }}
+        {{ parts.temperature.unit }}</span
+      >
     </span>
     <span v-if="humidityLabel" class="inline-flex items-center gap-1.5">
       <Droplets class="size-3.5 shrink-0 text-sky-500" aria-hidden="true" />

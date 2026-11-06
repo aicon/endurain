@@ -5409,6 +5409,14 @@ export interface components {
         /**
          * ActivityWeather
          * @description Open-Meteo hour stored on an activity (Dreeve-style meteo).
+         *
+         *     Attributes:
+         *         temperature_c: Air temperature in Celsius.
+         *         humidity: Relative humidity percent.
+         *         wind_kmh: Wind speed in km/h.
+         *         wind_dir: Eight-point compass label (N, NE, …).
+         *         code: WMO weather code.
+         *         unavailable: True when there is no GPS hour to look up.
          */
         ActivityWeather: {
             /** Code */
@@ -5442,6 +5450,7 @@ export interface components {
          *             only: it is excluded from serialization, so a client never receives it.
          *         map_thumbnail_url: The servable, token-gated URL of the thumbnail, set by
          *             the service layer for a viewer allowed to see the map.
+         *         weather: Open-Meteo hour at the start, when GPS exists.
          */
         ActivityRead: {
             /** Activity Type */
