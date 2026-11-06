@@ -9,17 +9,7 @@
 
 </div>
 
----
-
-<div align="center">
-
-# Original description
-
-The text below is the original Endurain README.
-
-</div>
-
----
+<img src="logo/section-rule.svg" alt="" width="100%" height="8">
 
 <div align="center">
   <img src="logo/brand_logo_dark_theme.png" width="128" height="128">
