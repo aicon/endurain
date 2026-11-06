@@ -5407,35 +5407,6 @@ export interface components {
             url: string;
         };
         /**
-         * ActivityWeather
-         * @description Open-Meteo hour stored on an activity (Dreeve-style meteo).
-         *
-         *     Attributes:
-         *         temperature_c: Air temperature in Celsius.
-         *         humidity: Relative humidity percent.
-         *         wind_kmh: Wind speed in km/h.
-         *         wind_dir: Eight-point compass label (N, NE, …).
-         *         code: WMO weather code.
-         *         unavailable: True when there is no GPS hour to look up.
-         */
-        ActivityWeather: {
-            /** Code */
-            code?: number | null;
-            /** Humidity */
-            humidity?: number | null;
-            /** Temperature C */
-            temperature_c?: number | null;
-            /**
-             * Unavailable
-             * @default false
-             */
-            unavailable: boolean;
-            /** Wind Dir */
-            wind_dir?: string | null;
-            /** Wind Kmh */
-            wind_kmh?: number | null;
-        };
-        /**
          * ActivityRead
          * @description Schema representing a stored fitness activity — what the API returns.
          *
@@ -5744,6 +5715,35 @@ export interface components {
          * @enum {string}
          */
         ActivityVisibility: "public" | "followers" | "private";
+        /**
+         * ActivityWeather
+         * @description Open-Meteo hour stored on an activity (Dreeve-style meteo).
+         *
+         *     Attributes:
+         *         temperature_c: Air temperature in Celsius.
+         *         humidity: Relative humidity percent.
+         *         wind_kmh: Wind speed in km/h.
+         *         wind_dir: Eight-point compass label (N, NE, …).
+         *         code: WMO weather code.
+         *         unavailable: True when there is no GPS hour to look up.
+         */
+        ActivityWeather: {
+            /** Code */
+            code?: number | null;
+            /** Humidity */
+            humidity?: number | null;
+            /** Temperature C */
+            temperature_c?: number | null;
+            /**
+             * Unavailable
+             * @default false
+             */
+            unavailable: boolean;
+            /** Wind Dir */
+            wind_dir?: string | null;
+            /** Wind Kmh */
+            wind_kmh?: number | null;
+        };
         /**
          * ActivityWorkoutStepsRead
          * @description A stored workout step, as the API returns it.
