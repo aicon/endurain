@@ -86,17 +86,6 @@ Endurain currently supports:
 
 Please visit the [ROADMAP.md file on GitHub](https://github.com/endurain-project/endurain/blob/master/ROADMAP.md).
 
-## Sponsors
-
-A huge thank you to the project sponsors! Your support helps keep this project going.
-
-Support Endurain's development on:
-
-- [Buy Me a Coffee](https://buymeacoffee.com/endurain)
-- [liberapay](https://liberapay.com/endurain/)
-- [Patreon](https://patreon.com/u84745218)
-- [GitHub Sponsors using archived repo](https://github.com/endurain-project/endurain)
-
 ## Contributing
 
 Contributions are welcomed! Please open an issue to discuss any changes or improvements before submitting a PR. Check out the [Contributing Guidelines](https://github.com/endurain-project/endurain/blob/master/CONTRIBUTING.md) for more details.

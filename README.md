@@ -1,5 +1,7 @@
 > [!NOTE]
 > **This repository is an unofficial fork** of [endurain-project/endurain](https://github.com/endurain-project/endurain) at v0.20.2. It is **not** the official Endurain project and is **not endorsed** by the Endurain maintainers. What this fork adds is listed in [FORK.md](./FORK.md). Endurain® is a registered trademark of João Vitória Silva. See [`TRADEMARK.md`](./TRADEMARK.md).
+>
+> Support for work on this fork goes to its author, not to the official project: [Ko-fi](https://ko-fi.com/aiconwg).
 
 > [!NOTE]
 > **Endurain is on a temporary feature freeze** - The project is not paused. The focus is shifting from new features to strengthening the foundations. More details [here](https://docs.endurain.com/blog/2026/05/23/pausing-new-features-so-endurain-can-keep-growing/)
@@ -38,7 +40,6 @@ Experience Endurain without installation:
 - [Endurain documentation](https://docs.endurain.com)
 - [What is Endurain?](#what-is-endurain)
 - [Endurain screenshots](https://docs.endurain.com/gallery/)
-- [Sponsors](#sponsors)
 - [Contributing](#contributing)
 - [Help Translate](#help-translate)
 - [License](#license)
@@ -55,17 +56,6 @@ Endurain is a self-hosted fitness tracking service designed to give users full c
 To deploy Endurain, a Docker image is available, and a comprehensive example can be found in the "docker-compose.yml.example" file provided. Configuration is facilitated through environment variables, ensuring flexibility and ease of customization.
 
 For more information please see the Endurain's [documentation](https://docs.endurain.com).
-
-## Sponsors
-
-A huge thank you to the project sponsors! Your support helps keep this project going.
-
-Support Endurain's development on:
-
-- [Buy Me a Coffee](https://buymeacoffee.com/endurain)
-- [liberapay](https://liberapay.com/endurain/)
-- [Patreon](https://patreon.com/u84745218)
-- [GitHub Sponsors using archived repo](https://github.com/endurain-project/endurain)
 
 ## Contributing
 
