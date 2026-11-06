@@ -80,6 +80,22 @@ export function activityLocalDate(startTime: string, timeZone: string | null): s
   }
 }
 
+/**
+ * Whether a civil date falls on Saturday or Sunday.
+ * Independent of which weekday the profile week starts on.
+ *
+ * @param isoDate - `YYYY-MM-DD`.
+ * @returns `true` for Saturday and Sunday.
+ */
+export function isCalendarWeekend(isoDate: string): boolean {
+  const [year, month, day] = isoDate.split('-').map(Number)
+  if (!year || !month || !day) {
+    return false
+  }
+  const weekday = new Date(Date.UTC(year, month - 1, day)).getUTCDay()
+  return weekday === 0 || weekday === 6
+}
+
 /** Pads a UTC date's calendar fields to `YYYY-MM-DD`. */
 function isoUtc(date: Date): string {
   const year = date.getUTCFullYear()

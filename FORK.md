@@ -48,7 +48,7 @@ The owner three-dot menu on the activity page and the home card includes **Downl
 
 On a phone in portrait, the home page shows only the Goals card before the activity list. Add activity, the mine/following tabs, and the calendar are not rendered on that view. Landscape phones, tablets, and desktop keep the original three-column layout.
 
-The center column shows the mine/following tabs, then a month calendar with a bordered day grid, then the first activity. The current month opens by default, and the arrows step to other months. The first column follows the profile setting **First day of the week** (Saját profil → A hét első napja), which defaults to Monday and can be Sunday. A day with an activity shows that activity's type icon (a hike uses a mountain, a walk uses footprints, a ride uses a bike). The icon opens the activity.
+The center column shows the mine/following tabs, then a month calendar with a bordered day grid, then the first activity. Saturday and Sunday cells are `#F5F5F5`. The current day is `#EFF1F3`. The current month opens by default, and the arrows step to other months. The first column follows the profile setting **First day of the week** (Saját profil → A hét első napja), which defaults to Monday and can be Sunday. A day with an activity shows that activity's type icon (a hike uses a mountain, a walk uses footprints, a ride uses a bike). The icon opens the activity.
 
 The GPS track polyline on Leaflet maps, home/detail thumbnails, and the replay route line is another 25% thinner. Already-rendered thumbnails keep the previous width until that activity is imported again.
 

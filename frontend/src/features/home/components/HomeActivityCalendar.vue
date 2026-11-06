@@ -11,6 +11,7 @@ import { useMonthActivitiesQuery } from '@/features/home/composables/useHome'
 import {
   activityLocalDate,
   calendarActivityIcon,
+  isCalendarWeekend,
   monthGrid,
   shiftMonth,
   weekStartIndex,
@@ -67,6 +68,17 @@ const weekdays = computed(() => {
 
 const todayKey = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`
 
+/** Weekend cells are light gray. Today is a step darker and wins on a weekend. */
+function dayBackground(date: string): string {
+  if (date === todayKey) {
+    return 'home-calendar-today'
+  }
+  if (isCalendarWeekend(date)) {
+    return 'home-calendar-weekend'
+  }
+  return ''
+}
+
 /** Moves the visible month. */
 function step(delta: number): void {
   cursor.value = shiftMonth(cursor.value.year, cursor.value.monthIndex, delta)
@@ -107,7 +119,7 @@ function step(delta: number): void {
           index % 7 !== 6 && 'border-r',
           index < days.length - 7 && 'border-b',
           day.inMonth ? 'text-foreground' : 'text-muted-foreground/45',
-          day.date === todayKey && 'bg-muted',
+          dayBackground(day.date),
         ]"
       >
         <span class="text-xs leading-none">{{ day.day }}</span>
@@ -131,3 +143,21 @@ function step(delta: number): void {
     </div>
   </Card>
 </template>
+
+<style scoped>
+.home-calendar-weekend {
+  background-color: #f5f5f5;
+}
+
+.home-calendar-today {
+  background-color: #eff1f3;
+}
+
+.dark .home-calendar-weekend {
+  background-color: #2e2e32;
+}
+
+.dark .home-calendar-today {
+  background-color: #3a3a40;
+}
+</style>

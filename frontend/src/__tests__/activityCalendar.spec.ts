@@ -5,6 +5,7 @@ import { activityTypeIcon } from '@/features/activities/utils/activityType'
 import {
   activityLocalDate,
   calendarActivityIcon,
+  isCalendarWeekend,
   monthGrid,
   shiftMonth,
 } from '@/features/home/utils/activityCalendar'
@@ -33,6 +34,15 @@ describe('monthGrid', () => {
 
     expect(cells[0]).toEqual({ date: '2026-09-28', day: 28, inMonth: false })
     expect(cells.find((cell) => cell.inMonth)?.date).toBe('2026-10-01')
+  })
+})
+
+describe('isCalendarWeekend', () => {
+  it('marks Saturday and Sunday whatever day the week starts on', () => {
+    expect(isCalendarWeekend('2026-11-01')).toBe(true)
+    expect(isCalendarWeekend('2026-11-06')).toBe(false)
+    expect(isCalendarWeekend('2026-11-07')).toBe(true)
+    expect(isCalendarWeekend('2026-10-31')).toBe(true)
   })
 })
 
