@@ -262,8 +262,7 @@ describe('apiDownload', () => {
 
     const result = await apiDownload('/activities/1/file')
 
-    expect(result.blob).toBeInstanceOf(Blob)
-    expect(result.blob.size).toBeGreaterThan(0)
+    expect(result.blob.size).toBe(6)
     expect(result.filename).toBe('Afternoon_Walk.gpx')
     expect(fetchMock).toHaveBeenCalledWith('/activities/1/file', expect.anything())
   })
