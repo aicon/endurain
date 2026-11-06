@@ -4,8 +4,7 @@ import { useI18n } from 'vue-i18n'
 import { RouterLink, useRoute } from 'vue-router'
 import { ArrowLeft } from '@lucide/vue'
 
-import type { ActivityOwner, HrZoneBucket } from '@/features/activities/types'
-import type { StreamChart } from '@/features/activities/utils/streams'
+import type { ActivityOwner } from '@/features/activities/types'
 
 import { Button } from '@/components/ui/button'
 import { Card } from '@/components/ui/card'
@@ -39,7 +38,7 @@ import {
 } from '@/features/activities/utils/privacy'
 import { extractHrZones } from '@/features/activities/utils/hrZones'
 import { pointAtFraction } from '@/features/activities/utils/scrub'
-import { buildStreamCharts, extractTrack } from '@/features/activities/utils/streams'
+import { buildStreamCharts, extractTrack, layoutActivityChartPanels } from '@/features/activities/utils/streams'
 
 const route = useRoute()
 const { t } = useI18n()
@@ -188,30 +187,9 @@ const showHrZones = computed(
     (hrZones.value?.length ?? 0) > 0,
 )
 
-// One chart-grid panel: either a metric chart or the HR-zones card. The HR
-// zones are inserted immediately after the HR chart so they sit side by side
-// in the two-column grid.
-type ChartGridPanel =
-  | { kind: 'chart'; key: string; chart: StreamChart }
-  | { kind: 'hr-zones'; key: string; zones: HrZoneBucket[] }
-
-const chartPanels = computed<ChartGridPanel[]>(() => {
-  const panels: ChartGridPanel[] = []
-  const zones = showHrZones.value ? hrZones.value : null
-  let zonesInserted = false
-  for (const chart of streamCharts.value) {
-    panels.push({ kind: 'chart', key: chart.metric, chart })
-    if (chart.metric === 'hr' && zones) {
-      panels.push({ kind: 'hr-zones', key: 'hr-zones', zones })
-      zonesInserted = true
-    }
-  }
-  // HR zones present but no HR chart (unlikely) — still surface them.
-  if (zones && !zonesInserted) {
-    panels.push({ kind: 'hr-zones', key: 'hr-zones', zones })
-  }
-  return panels
-})
+const chartPanels = computed(() =>
+  layoutActivityChartPanels(streamCharts.value, showHrZones.value ? hrZones.value : null),
+)
 
 // `data` is `null` (not `undefined`) once a fetch resolves to a missing or
 // non-shareable activity; distinguish that from the still-loading state.

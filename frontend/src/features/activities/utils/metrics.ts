@@ -87,26 +87,75 @@ export function weatherConditionLabelKey(code: number | null): string {
   return 'activities.metrics.weather'
 }
 
-/** One-line Open-Meteo summary for the activity header (Dreeve-style). */
+/** Visual kind for the coloured weather icon. */
+export type WeatherConditionKind =
+  | 'clear'
+  | 'cloudy'
+  | 'foggy'
+  | 'drizzle'
+  | 'rainy'
+  | 'snowy'
+  | 'stormy'
+  | 'weather'
+
+const WIND_DIRS = new Set(['N', 'NE', 'E', 'SE', 'S', 'SW', 'W', 'NW'])
+
+/** Maps an Open-Meteo code onto the coloured-icon kind. */
+export function weatherConditionKind(code: number | null): WeatherConditionKind {
+  switch (weatherConditionLabelKey(code)) {
+    case 'activities.metrics.weatherClear':
+      return 'clear'
+    case 'activities.metrics.weatherCloudy':
+      return 'cloudy'
+    case 'activities.metrics.weatherFoggy':
+      return 'foggy'
+    case 'activities.metrics.weatherDrizzle':
+      return 'drizzle'
+    case 'activities.metrics.weatherRainy':
+      return 'rainy'
+    case 'activities.metrics.weatherSnowy':
+      return 'snowy'
+    case 'activities.metrics.weatherStormy':
+      return 'stormy'
+    default:
+      return 'weather'
+  }
+}
+
+/** i18n key for an eight-point compass label, or `null`. */
+export function weatherDirKey(dir: string | null): string | null {
+  if (!dir || !WIND_DIRS.has(dir)) {
+    return null
+  }
+  return `activities.metrics.windDir.${dir}`
+}
+
+/** Structured Open-Meteo bits for the Dreeve-style header row. */
+export interface ActivityWeatherParts {
+  conditionKey: string
+  conditionKind: WeatherConditionKind
+  temperature: { value: string; unit: string }
+  humidity: number | null
+  wind: { value: string; unit: string; dirKey: string | null } | null
+}
+
+/** Splits stored weather into labelled, unit-aware parts for the header. */
 export function formatActivityWeather(
   weather: ActivityWeather | null,
   units: Units,
-): { conditionKey: string; detail: string } | null {
+): ActivityWeatherParts | null {
   if (weather === null || !has(weather.temperatureC)) {
     return null
   }
-  const temp = formatAirTemperature(weather.temperatureC, units)
-  const parts = [`${temp.value} ${temp.unit}`]
-  if (has(weather.humidity)) {
-    parts.push(`${weather.humidity}%`)
-  }
-  if (has(weather.windKmh)) {
-    const wind = formatWindSpeed(weather.windKmh, units)
-    parts.push(weather.windDir ? `${wind.value} ${wind.unit} ${weather.windDir}` : `${wind.value} ${wind.unit}`)
-  }
+  const wind = has(weather.windKmh)
+    ? { ...formatWindSpeed(weather.windKmh, units), dirKey: weatherDirKey(weather.windDir) }
+    : null
   return {
     conditionKey: weatherConditionLabelKey(weather.code),
-    detail: parts.join(' · '),
+    conditionKind: weatherConditionKind(weather.code),
+    temperature: formatAirTemperature(weather.temperatureC, units),
+    humidity: has(weather.humidity) ? weather.humidity : null,
+    wind,
   }
 }
 

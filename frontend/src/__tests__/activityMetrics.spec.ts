@@ -133,7 +133,7 @@ describe('buildActivityMetrics elapsed tile', () => {
 })
 
 describe('formatActivityWeather', () => {
-  it('joins condition, temperature, humidity and wind', () => {
+  it('splits condition, temperature, humidity and wind for the header', () => {
     expect(
       formatActivityWeather(
         {
@@ -147,7 +147,10 @@ describe('formatActivityWeather', () => {
       ),
     ).toEqual({
       conditionKey: 'activities.metrics.weatherRainy',
-      detail: '8.4 °C · 81% · 14 km/h NW',
+      conditionKind: 'rainy',
+      temperature: { value: '8.4', unit: '°C' },
+      humidity: 81,
+      wind: { value: '14', unit: 'km/h', dirKey: 'activities.metrics.windDir.NW' },
     })
   })
 

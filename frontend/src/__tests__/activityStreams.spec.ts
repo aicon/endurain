@@ -8,6 +8,7 @@ import {
   extractTrack,
   extractTrackPoints,
   isMetricRelevantForType,
+  layoutActivityChartPanels,
   METRIC_PRIVACY_FIELD,
 } from '@/features/activities/utils/streams'
 
@@ -204,7 +205,7 @@ describe('buildStreamCharts', () => {
       'metric',
       (metric) => metric !== 'hr',
     )
-    expect(charts.map((chart) => chart.metric)).toEqual(['pace', 'elevation'])
+    expect(charts.map((chart) => chart.metric)).toEqual(['elevation', 'pace'])
   })
 
   it('shows speed (not pace) for cycling', () => {
@@ -216,6 +217,43 @@ describe('buildStreamCharts', () => {
       () => true,
     )
     expect(charts.map((chart) => chart.metric)).toEqual(['velocity'])
+  })
+})
+
+describe('layoutActivityChartPanels', () => {
+  const zones = [{ zone: 1, percent: 4, hrRange: '< 78', timeSeconds: 10 }]
+
+  it('orders HR, elevation, zones, then remaining metrics', () => {
+    const charts = buildStreamCharts(
+      [
+        stream(1, [{ hr: 120 }]),
+        stream(4, [{ ele: 10 }]),
+        stream(6, [{ pace: 0.3 }]),
+      ],
+      makeActivity({ activityType: 1 }),
+      'metric',
+      () => true,
+    )
+    expect(layoutActivityChartPanels(charts, zones).map((panel) => panel.key)).toEqual([
+      'hr',
+      'elevation',
+      'hr-zones',
+      'pace',
+    ])
+  })
+
+  it('places zones after HR when there is no elevation chart', () => {
+    const charts = buildStreamCharts(
+      [stream(1, [{ hr: 120 }]), stream(6, [{ pace: 0.3 }])],
+      makeActivity({ activityType: 1 }),
+      'metric',
+      () => true,
+    )
+    expect(layoutActivityChartPanels(charts, zones).map((panel) => panel.key)).toEqual([
+      'hr',
+      'hr-zones',
+      'pace',
+    ])
   })
 })
 

@@ -7,6 +7,7 @@ import type {
   Activity,
   ActivityPrivacy,
   ActivityStream,
+  HrZoneBucket,
   StreamMetric,
   StreamWaypoint,
 } from '../types'
@@ -45,14 +46,14 @@ const METRIC_BY_TYPE: Record<number, StreamMetric> = {
   [STREAM_TYPE.temperature]: 'temperature',
 }
 
-/** Stable display order for the metric charts. */
+/** Stable display order for the metric charts on the activity detail page. */
 export const STREAM_METRIC_ORDER: readonly StreamMetric[] = [
+  'hr',
+  'elevation',
   'pace',
   'velocity',
   'cadence',
-  'hr',
   'power',
-  'elevation',
   'temperature',
 ]
 
@@ -500,6 +501,42 @@ export function buildStreamCharts(
     const chart = byMetric.get(metric)
     return chart ? [chart] : []
   })
+}
+
+/** A chart-grid cell on the activity detail page. */
+export type ActivityChartPanel =
+  | { kind: 'chart'; key: string; chart: StreamChart }
+  | { kind: 'hr-zones'; key: string; zones: HrZoneBucket[] }
+
+/**
+ * Places heart-rate zones after elevation (or after HR when there is no
+ * elevation chart) so the two-column grid reads HR, elevation, zones, then
+ * the remaining metrics.
+ *
+ * @param charts - Ordered metric charts.
+ * @param zones - HR zone buckets, or `null` when they should not appear.
+ * @returns Grid panels in display order.
+ */
+export function layoutActivityChartPanels(
+  charts: StreamChart[],
+  zones: HrZoneBucket[] | null,
+): ActivityChartPanel[] {
+  const panels: ActivityChartPanel[] = []
+  const hasElevation = charts.some((chart) => chart.metric === 'elevation')
+  let zonesInserted = false
+  for (const chart of charts) {
+    panels.push({ kind: 'chart', key: chart.metric, chart })
+    const afterElevation = chart.metric === 'elevation'
+    const afterHrWithoutElevation = chart.metric === 'hr' && !hasElevation
+    if (zones && !zonesInserted && (afterElevation || afterHrWithoutElevation)) {
+      panels.push({ kind: 'hr-zones', key: 'hr-zones', zones })
+      zonesInserted = true
+    }
+  }
+  if (zones && !zonesInserted) {
+    panels.push({ kind: 'hr-zones', key: 'hr-zones', zones })
+  }
+  return panels
 }
 
 /** A route polyline plus the sample clock, when every point has one. */
