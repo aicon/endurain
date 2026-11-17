@@ -82,7 +82,8 @@
     "avgCadence": "Среден каданс",
     "maxCadence": "Максимален каданс",
     "calories": "Калории",
-    "jumps": "Скокове"
+    "jumps": "Скокове",
+    "steps": "Стъпки"
   },
   "streams": {
     "heartRate": "Пулс",

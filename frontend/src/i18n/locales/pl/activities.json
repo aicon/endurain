@@ -82,7 +82,8 @@
     "avgCadence": "Śr. kadencja",
     "maxCadence": "Maks. kadencja",
     "calories": "Kalorie",
-    "jumps": "Skoki"
+    "jumps": "Skoki",
+    "steps": "Kroki"
   },
   "streams": {
     "heartRate": "Tętno",

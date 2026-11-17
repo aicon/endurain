@@ -82,7 +82,8 @@
     "avgCadence": "Keskmine kadents",
     "maxCadence": "Maksimaalne kadents",
     "calories": "Kalorid",
-    "jumps": "Hüpped"
+    "jumps": "Hüpped",
+    "steps": "Sammud"
   },
   "streams": {
     "heartRate": "Pulss",

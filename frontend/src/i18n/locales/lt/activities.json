@@ -82,7 +82,8 @@
     "avgCadence": "Vid. kadencija",
     "maxCadence": "Maks. kadencija",
     "calories": "Kalorijos",
-    "jumps": "Šuoliai"
+    "jumps": "Šuoliai",
+    "steps": "Žingsniai"
   },
   "streams": {
     "heartRate": "Pulsas",

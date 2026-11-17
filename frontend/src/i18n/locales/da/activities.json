@@ -82,7 +82,8 @@
     "avgCadence": "Gns. kadence",
     "maxCadence": "Maks. kadence",
     "calories": "Kalorier",
-    "jumps": "Hop"
+    "jumps": "Hop",
+    "steps": "Skridt"
   },
   "streams": {
     "heartRate": "Puls",

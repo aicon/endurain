@@ -584,6 +584,47 @@ class TestParseGpxFile:
 
         assert result["activity"].calories == 123
 
+    def test_parse_gpx_file_reads_track_level_steps(
+        self,
+        tmp_path,
+        monkeypatch,
+    ):
+        """
+        Test track-level Steps extensions populate activity.total_cycles.
+        """
+        _patch_parser_side_effects(monkeypatch)
+        gpx_path = _write_gpx(
+            tmp_path,
+            """
+            <gpx version="1.1" creator="pytest"
+              xmlns:gpxtpx="http://www.garmin.com/xmlschemas/TrackPointExtension/v1">
+              <trk>
+                <name>Steps walk</name>
+                <type>Walk</type>
+                <extensions>
+                  <gpxtpx:TrackStatsExtension>
+                    <gpxtpx:Calories>12</gpxtpx:Calories>
+                    <gpxtpx:Steps>1842</gpxtpx:Steps>
+                  </gpxtpx:TrackStatsExtension>
+                </extensions>
+                <trkseg>
+                  <trkpt lat="0.0" lon="0.0">
+                    <time>2025-01-01T00:00:00Z</time>
+                  </trkpt>
+                  <trkpt lat="0.0" lon="0.001">
+                    <time>2025-01-01T00:00:10Z</time>
+                  </trkpt>
+                </trkseg>
+              </trk>
+            </gpx>
+            """.strip(),
+        )
+
+        result = gpx_utils.parse_gpx_file(gpx_path, user_id=1, default_timezone=_SERVER_TZ)
+
+        assert result["activity"].calories == 12
+        assert result["activity"].total_cycles == 1842
+
     def test_parse_gpx_file_without_extensions_creates_no_hr_or_cadence_stream(
         self,
         tmp_path,

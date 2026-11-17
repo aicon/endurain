@@ -113,7 +113,8 @@
     "avgCadence": "Avg cadence",
     "maxCadence": "Max cadence",
     "calories": "Calories",
-    "jumps": "Jumps"
+    "jumps": "Jumps",
+    "steps": "Steps"
   },
   "streams": {
     "heartRate": "Heart rate",

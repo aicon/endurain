@@ -82,7 +82,8 @@
     "avgCadence": "Ort. kadans",
     "maxCadence": "Maks. kadans",
     "calories": "Kalori",
-    "jumps": "Atlamalar"
+    "jumps": "Atlamalar",
+    "steps": "Adım"
   },
   "streams": {
     "heartRate": "Kalp atış hızı",

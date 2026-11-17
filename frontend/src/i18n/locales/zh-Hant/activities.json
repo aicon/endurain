@@ -82,7 +82,8 @@
     "avgCadence": "平均踏頻",
     "maxCadence": "最高踏頻",
     "calories": "卡路里",
-    "jumps": "跳數"
+    "jumps": "跳數",
+    "steps": "步數"
   },
   "streams": {
     "heartRate": "心率",

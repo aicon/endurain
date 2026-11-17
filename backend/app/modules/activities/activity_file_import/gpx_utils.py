@@ -39,6 +39,7 @@ class ParseState:
     activity_type: str | int = "Workout"
     activity_description: str | None = None
     calories: int | None = None
+    total_cycles: int | None = None
     distance: float = 0.0
     avg_hr: float | None = None
     max_hr: float | None = None
@@ -258,13 +259,51 @@ def _extract_track_calories(
     Returns:
         Calories as an integer, or None when absent or invalid.
     """
+    return _sum_track_extension_ints(track, "calories")
+
+
+def _extract_track_steps(
+    track: gpxpy.gpx.GPXTrack,
+) -> int | None:
+    """Extract total steps from track-level extensions.
+
+    Reads ``Steps`` (and common aliases) from TrackStats-style extension
+    blocks. Mobile uploads store phone / estimated step counts here; the
+    value is persisted as activity ``total_cycles`` for foot sports.
+
+    Args:
+        track: GPX track with optional extension elements.
+
+    Returns:
+        Steps as an integer, or None when absent or invalid.
+    """
+    for local_name in ("steps", "stepcount", "totalsteps"):
+        value = _sum_track_extension_ints(track, local_name)
+        if value is not None:
+            return value
+    return None
+
+
+def _sum_track_extension_ints(
+    track: gpxpy.gpx.GPXTrack,
+    local_name: str,
+) -> int | None:
+    """Sum integer extension elements matching ``local_name`` under a track.
+
+    Args:
+        track: GPX track with optional extension elements.
+        local_name: Lowercase local tag name to match.
+
+    Returns:
+        Aggregated integer, or None when no matching values exist.
+    """
     if not track.extensions:
         return None
 
     total: int | None = None
     for extension in track.extensions:
         for element in extension.iter():
-            if _extension_local_name(element.tag) != "calories":
+            if _extension_local_name(element.tag) != local_name:
                 continue
             value = _safe_optional_int(element.text)
             if value is None:
@@ -312,6 +351,10 @@ def _process_track_metadata(
     calories = _extract_track_calories(track)
     if calories is not None:
         state.calories = (state.calories or 0) + calories
+
+    steps = _extract_track_steps(track)
+    if steps is not None:
+        state.total_cycles = (state.total_cycles or 0) + steps
 
 
 def _process_trackpoint(
@@ -552,6 +595,7 @@ def _build_activity_schema(
         average_cad=(round(state.avg_cadence) if state.avg_cadence else None),
         max_cad=(round(state.max_cadence) if state.max_cadence else None),
         calories=state.calories,
+        total_cycles=state.total_cycles,
         strava_gear_id=None,
         strava_activity_id=None,
         garminconnect_activity_id=None,

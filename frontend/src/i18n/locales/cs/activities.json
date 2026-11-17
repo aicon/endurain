@@ -82,7 +82,8 @@
     "avgCadence": "Průměrná kadence",
     "maxCadence": "Maximální kadence",
     "calories": "Kalorie",
-    "jumps": "Skoky"
+    "jumps": "Skoky",
+    "steps": "Kroky"
   },
   "streams": {
     "heartRate": "Tepová frekvence",

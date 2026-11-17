@@ -82,7 +82,8 @@
     "avgCadence": "Vid. kadence",
     "maxCadence": "Maks. kadence",
     "calories": "Kalorijas",
-    "jumps": "Lēcieni"
+    "jumps": "Lēcieni",
+    "steps": "Soļi"
   },
   "streams": {
     "heartRate": "Sirdsdarbība",

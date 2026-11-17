@@ -4,6 +4,7 @@ import { useI18n } from 'vue-i18n'
 import {
   Clock,
   Flame,
+  Footprints,
   Gauge,
   Heart,
   Mountain,
@@ -43,6 +44,7 @@ const TILE_ICONS: Record<string, Component> = {
   avgPower: Zap,
   maxPower: Zap,
   jumps: PersonStanding,
+  steps: Footprints,
 }
 </script>
 

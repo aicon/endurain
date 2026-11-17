@@ -82,7 +82,8 @@
     "avgCadence": "Keskikadenssi",
     "maxCadence": "Maksimikadenssi",
     "calories": "Kalorit",
-    "jumps": "Hypyt"
+    "jumps": "Hypyt",
+    "steps": "Askeleet"
   },
   "streams": {
     "heartRate": "Syke",

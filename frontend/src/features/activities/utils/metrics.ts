@@ -8,6 +8,7 @@ import {
   activityTypeIsRunning,
   activityTypeIsSailing,
   activityTypeIsSwimming,
+  activityTypeIsWalking,
   activityTypeIsWindsurf,
   activityTypeUsesPace,
 } from './activityType'
@@ -330,6 +331,23 @@ export function buildActivityMetrics(
       })
     }
   }
+  // Foot sports: mobile GPX uploads store phone / estimated step counts in
+  // total_cycles via TrackStatsExtension Steps.
+  const pushSteps = (): void => {
+    if (
+      (activityTypeIsRunning(type) || activityTypeIsWalking(type)) &&
+      has(activity.totalCycles) &&
+      activity.totalCycles > 0
+    ) {
+      tiles.push({
+        key: 'steps',
+        labelKey: 'activities.metrics.steps',
+        value: String(Math.round(activity.totalCycles)),
+        unit: '',
+        accent: 'brand',
+      })
+    }
+  }
 
   // Non-distance sessions (gym/strength/yoga/racquet/…): calories, time, avg HR.
   if (!activityTypeIsDistanceBased(type)) {
@@ -363,13 +381,14 @@ export function buildActivityMetrics(
     pushMaxHr()
     pushCalories()
   } else if (activityTypeIsRunning(type)) {
-    // distance, time, pace, power, elevation, heart rate, calories
+    // distance, time, pace, power, elevation, heart rate, calories, steps
     pushPace()
     pushAvgPower()
     pushElevationGain()
     pushAvgHr()
     pushMaxHr()
     pushCalories()
+    pushSteps()
   } else if (activityTypeIsWindsurf(type) || activityTypeIsSailing(type)) {
     // distance, time, speed, heart rate, elevation, calories
     pushAvgSpeed()
@@ -378,7 +397,7 @@ export function buildActivityMetrics(
     pushElevationGain()
     pushCalories()
   } else {
-    // swimming/walking/hiking/rowing/…: distance, time, pace, heart rate, elevation, calories
+    // swimming/walking/hiking/rowing/…: distance, time, pace, heart rate, elevation, calories, steps
     pushPace()
     pushAvgHr()
     pushMaxHr()
@@ -386,6 +405,7 @@ export function buildActivityMetrics(
       pushElevationGain()
     }
     pushCalories()
+    pushSteps()
   }
 
   return tiles

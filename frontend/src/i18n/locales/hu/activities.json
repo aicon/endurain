@@ -113,7 +113,8 @@
     "avgCadence": "Átl. kadencia",
     "maxCadence": "Max. kadencia",
     "calories": "Kalória",
-    "jumps": "Ugrások"
+    "jumps": "Ugrások",
+    "steps": "Lépések"
   },
   "streams": {
     "heartRate": "Pulzusszám",

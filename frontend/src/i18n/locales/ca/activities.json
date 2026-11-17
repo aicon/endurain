@@ -82,7 +82,8 @@
     "avgCadence": "Cadència mitjana",
     "maxCadence": "Cadència màxima",
     "calories": "Calories",
-    "jumps": "Salts"
+    "jumps": "Salts",
+    "steps": "Passos"
   },
   "streams": {
     "heartRate": "Freqüència cardíaca",

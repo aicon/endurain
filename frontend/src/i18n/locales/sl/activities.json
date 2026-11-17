@@ -82,7 +82,8 @@
     "avgCadence": "Povp. kadenca",
     "maxCadence": "Maks. kadenca",
     "calories": "Kalorije",
-    "jumps": "Skoki"
+    "jumps": "Skoki",
+    "steps": "Koraki"
   },
   "streams": {
     "heartRate": "Srčni utrip",

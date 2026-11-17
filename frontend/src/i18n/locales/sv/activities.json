@@ -82,7 +82,8 @@
     "avgCadence": "Genomsnittlig kadens",
     "maxCadence": "Maximal kadens",
     "calories": "Kalorier",
-    "jumps": "Hopp"
+    "jumps": "Hopp",
+    "steps": "Steg"
   },
   "streams": {
     "heartRate": "Hjärtfrekvens",

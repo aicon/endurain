@@ -82,7 +82,8 @@
     "avgCadence": "Ø Kadenz",
     "maxCadence": "Max. Kadenz",
     "calories": "Kalorien",
-    "jumps": "Sprünge"
+    "jumps": "Sprünge",
+    "steps": "Schritte"
   },
   "streams": {
     "heartRate": "Herzfrequenz",

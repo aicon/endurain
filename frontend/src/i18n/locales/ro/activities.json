@@ -82,7 +82,8 @@
     "avgCadence": "Cadență medie",
     "maxCadence": "Cadență maximă",
     "calories": "Calorii",
-    "jumps": "Sărituri"
+    "jumps": "Sărituri",
+    "steps": "Pași"
   },
   "streams": {
     "heartRate": "Puls",

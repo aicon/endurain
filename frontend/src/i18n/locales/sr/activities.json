@@ -82,7 +82,8 @@
     "avgCadence": "Prosečna kadenca",
     "maxCadence": "Maksimalna kadenca",
     "calories": "Kalorije",
-    "jumps": "Skokovi"
+    "jumps": "Skokovi",
+    "steps": "Koraci"
   },
   "streams": {
     "heartRate": "Puls",

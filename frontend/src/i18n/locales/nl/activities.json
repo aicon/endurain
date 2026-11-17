@@ -82,7 +82,8 @@
     "avgCadence": "Gem. cadans",
     "maxCadence": "Max. cadans",
     "calories": "Calorieën",
-    "jumps": "Sprongen"
+    "jumps": "Sprongen",
+    "steps": "Stappen"
   },
   "streams": {
     "heartRate": "Hartslag",

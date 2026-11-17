@@ -189,6 +189,26 @@ describe('buildActivityMetrics', () => {
     expect(tiles.map((tile) => tile.key)).not.toContain('jumps')
   })
 
+  it('shows a steps tile for walking when total cycles are present', () => {
+    const tiles = buildActivityMetrics(
+      makeActivity({ activityType: 11, totalCycles: 1842 }),
+      'metric',
+      visible,
+    )
+    const steps = tiles.find((tile) => tile.key === 'steps')
+    expect(steps?.value).toBe('1842')
+    expect(steps?.labelKey).toBe('activities.metrics.steps')
+  })
+
+  it('shows a steps tile for running when total cycles are present', () => {
+    const tiles = buildActivityMetrics(
+      makeActivity({ activityType: 1, totalCycles: 4200 }),
+      'metric',
+      visible,
+    )
+    expect(tiles.find((tile) => tile.key === 'steps')?.value).toBe('4200')
+  })
+
   it('hides heart-rate tiles for a privacy-restricted swimmer but keeps pace', () => {
     const tiles = buildActivityMetrics(makeActivity({ activityType: 8 }), 'metric', {
       ...visible,
